@@ -1,9 +1,17 @@
 import type { FingerprintEvidence } from "../fingerprint/evidence.types.js";
 import type { ScanPort } from "../types/scan.types.js";
 import type { PortInspections } from "../inspection/types.js";
-import type { RiskResult } from "./types.js";
 import type { ServiceFingerprint } from "../fingerprint/fingerprint.types.js";
 import type { InfrastructureAnalysis } from "../infrastructure/infrastructure.types.js";
+import { RISK_DEFINITIONS } from "./definitions.js";
+
+import type {
+    RiskResult
+} from "./types.js";
+
+import type {
+    RiskCode
+} from "./definitions.js";
 
 export interface PortAnalysisInput {
     port: ScanPort;
@@ -26,63 +34,55 @@ export class RiskEngine {
         switch (port.service) {
 
             case "domain":
-                return {
-                    level: "Info",
-                    reason:
-                        fingerprint.product
-                            ? `DNS server exposed (${fingerprint.product}).`
-                            : "DNS service exposed.",
-                    code: "DNS-EXPOSED"
-                };
+                return this.result(
+                    "DNS-EXPOSED",
+                    fingerprint.confidence,
+                    fingerprint.product
+                        ? `DNS server exposed (${fingerprint.product}).`
+                        : "DNS service exposed."
+                );
 
-            case "redis":
-                return {
-                    level: "Critical",
-                    reason: "Redis is exposed to the Internet.",
-                    code: "REDIS-EXPOSED"
-                };
+                case "redis":
+                    return this.result(
+                        "REDIS-EXPOSED",
+                        fingerprint.confidence
+                    );
 
-            case "mongodb":
-                return {
-                    level: "Critical",
-                    reason: "MongoDB is publicly accessible.",
-                    code: "MONGODB-EXPOSED"
-                };
+                case "mongodb":
+                    return this.result(
+                        "MONGODB-EXPOSED",
+                        fingerprint.confidence
+                    );
 
-            case "mysql":
-                return {
-                    level: "High",
-                    reason: "MySQL database is publicly accessible.",
-                    code: "MYSQL-EXPOSED"
-                };
+                case "mysql":
+                    return this.result(
+                        "MYSQL-EXPOSED",
+                        fingerprint.confidence
+                    );
 
-            case "postgresql":
-                return {
-                    level: "High",
-                    reason: "PostgreSQL database is publicly accessible.",
-                    code: "POSTGRESQL-EXPOSED"
-                };
+                case "postgresql":
+                    return this.result(
+                        "POSTGRESQL-EXPOSED",
+                        fingerprint.confidence
+                    );
 
-            case "ftp":
-                return {
-                    level: "High",
-                    reason: "FTP transmits credentials unencrypted.",
-                    code: "FTP-UNENCRYPTED"
-                };
+                case "ftp":
+                    return this.result(
+                        "FTP-UNENCRYPTED",
+                        fingerprint.confidence
+                    );
 
-            case "telnet":
-                return {
-                    level: "Critical",
-                    reason: "Telnet is insecure.",
-                    code: "TELNET-INSECURE"
-                };
+                case "telnet":
+                    return this.result(
+                        "TELNET-INSECURE",
+                        fingerprint.confidence
+                    );
 
-            case "ssh":
-                return {
-                    level: "Low",
-                    reason: "Remote administration service exposed.",
-                    code: "SSH-EXPOSED"
-                };
+                case "ssh":
+                    return this.result(
+                        "SSH-EXPOSED",
+                        fingerprint.confidence
+                    );
 
             case "http":
                 return this.analyzeHttp(
@@ -92,17 +92,41 @@ export class RiskEngine {
                 );
 
             case "https":
+            case "https-alt":
                 return this.analyzeHttps(
                     inspections
                 );
 
             default:
-                return {
-                    level: "Info",
-                    reason: "Unknown service.",
-                    code: "UNKNOWN-SERVICE"
-                };
+                return this.result(
+                    "UNKNOWN-SERVICE",
+                    50
+                );
         }
+    }
+
+    private result(
+        code: RiskCode,
+        confidence: number,
+        reason?: string
+    ): RiskResult {
+
+        const definition =
+            RISK_DEFINITIONS[code];
+
+        return {
+
+            level:
+                definition.level,
+
+            code,
+
+            reason:
+                reason ??
+                definition.reason,
+
+            confidence
+        };
     }
 
     private analyzeHttp(
@@ -114,52 +138,39 @@ export class RiskEngine {
         if (
             this.isBehindCdn(infrastructure)
         ) {
-            return {
-                level: "Info",
-                reason:
-                    "HTTP service is exposed behind a CDN with hidden origin.",
-                code: "HTTP-CDN-EDGE"
-            };
+            return this.result(
+                "HTTP-CDN-EDGE",
+                infrastructure.confidence
+            );
         }
 
-        /*
-        * Nmap says SSL OR TLS inspector confirmed TLS.
-        */
         if (
             port.tunnel === "ssl" ||
             inspections.tls
         ) {
-            return {
-                level: "Info",
-                reason: "Encrypted web service.",
-                code: "HTTP-ENCRYPTED"
-            };
+            return this.result(
+                "HTTP-ENCRYPTED",
+                inspections.tls
+                    ? 95
+                    : 90
+            );
         }
 
-        /*
-        * HTTP redirects to HTTPS.
-        */
         if (
             this.redirectsToHttps(
                 inspections.redirects
             )
         ) {
-            return {
-                level: "Info",
-                reason: "HTTP redirects to HTTPS.",
-                code: "HTTP-REDIRECTS-HTTPS"
-            };
+            return this.result(
+                "HTTP-REDIRECTS-HTTPS",
+                95
+            );
         }
 
-        /*
-        * Direct unencrypted HTTP.
-        */
-        return {
-            level: "Medium",
-            reason:
-                "HTTP service is exposed without encryption.",
-            code: "HTTP-UNENCRYPTED"
-        };
+        return this.result(
+            "HTTP-UNENCRYPTED",
+            90
+        );
     }
 
     private analyzeHttps(
@@ -167,18 +178,16 @@ export class RiskEngine {
     ): RiskResult {
 
         if (inspections.tls) {
-            return {
-                level: "Info",
-                reason: "Encrypted web service.",
-                code: "HTTPS-ENCRYPTED"
-            };
+            return this.result(
+                "HTTPS-ENCRYPTED",
+                95
+            );
         }
 
-        return {
-            level: "Info",
-            reason: "HTTPS service detected.",
-            code: "HTTPS"
-        };
+        return this.result(
+            "HTTPS",
+            90
+        );
     }
 
     private redirectsToHttps(
@@ -205,9 +214,7 @@ export class RiskEngine {
                 } catch {
 
                     return false;
-
                 }
-
             }
         );
     }

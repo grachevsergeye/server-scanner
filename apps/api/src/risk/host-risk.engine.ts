@@ -1,5 +1,15 @@
 import type { PortAnalysis } from "../analysis/types.js";
-import type { HostRiskResult, RiskLevel } from "./types.js";
+import type {
+    HostRiskResult,
+    RiskFinding,
+    RiskLevel
+} from "./types.js";
+
+import {
+    RISK_DEFINITIONS,
+    type RiskCode
+} from "./definitions.js";
+
 
 export class HostRiskEngine {
 
@@ -7,15 +17,65 @@ export class HostRiskEngine {
         ports: PortAnalysis[]
     ): HostRiskResult {
 
+        const findings =
+            this.buildFindings(ports);
+
+        const severity =
+            this.countSeverities(findings);
+
+        const score =
+            this.calculateScore(findings);
+
+        const level =
+            this.levelFromScore(score);
+
+        return {
+
+            level,
+
+            score,
+
+            findings,
+
+            totalPorts:
+                ports.length,
+
+            critical:
+                severity.critical,
+
+            high:
+                severity.high,
+
+            medium:
+                severity.medium,
+
+            low:
+                severity.low,
+
+            info:
+                severity.info
+        };
+    }
+
+    private countSeverities(
+        findings: RiskFinding[]
+    ): {
+        critical: number;
+        high: number;
+        medium: number;
+        low: number;
+        info: number;
+    } {
+
         let critical = 0;
         let high = 0;
         let medium = 0;
         let low = 0;
         let info = 0;
 
-        for (const port of ports) {
+        for (const finding of findings) {
 
-            switch (port.risk.level) {
+            switch (finding.level) {
 
                 case "Critical":
                     critical++;
@@ -39,22 +99,7 @@ export class HostRiskEngine {
             }
         }
 
-        const score =
-            this.calculateScore({
-                critical,
-                high,
-                medium,
-                low,
-                info
-            });
-
-        const level =
-            this.levelFromScore(score);
-
         return {
-            level,
-            score,
-            totalPorts: ports.length,
             critical,
             high,
             medium,
@@ -63,24 +108,92 @@ export class HostRiskEngine {
         };
     }
 
-    private calculateScore({
-        critical,
-        high,
-        medium,
-        low
-    }: {
-        critical: number;
-        high: number;
-        medium: number;
-        low: number;
-        info: number;
-    }): number {
+    private buildFindings(
+        ports: PortAnalysis[]
+    ): RiskFinding[] {
+
+        const groups =
+            new Map<RiskCode, PortAnalysis[]>();
+
+        for (const analysis of ports) {
+
+            const code =
+                analysis.risk.code;
+
+            const group =
+                groups.get(code);
+
+            if (group) {
+
+                group.push(analysis);
+
+            } else {
+
+                groups.set(
+                    code,
+                    [analysis]
+                );
+            }
+        }
+
+        return Array.from(
+            groups.entries()
+        ).map(
+            ([code, groupedPorts]) => {
+
+                const definition =
+                    RISK_DEFINITIONS[code];
+
+                const confidence =
+                    Math.round(
+                        groupedPorts.reduce(
+                            (sum, analysis) =>
+                                sum +
+                                analysis.risk.confidence,
+                            0
+                        ) /
+                        groupedPorts.length
+                    );
+
+                return {
+
+                    level:
+                        definition.level,
+
+                    code,
+
+                    title:
+                        definition.title,
+
+                    reason:
+                        definition.reason,
+
+                    confidence,
+
+                    ports:
+                        groupedPorts.map(
+                            analysis =>
+                                analysis.port.port
+                        ),
+
+                    count:
+                        groupedPorts.length
+                };
+            }
+        );
+    }
+
+    private calculateScore(
+        findings: RiskFinding[]
+    ): number {
 
         const score =
-            critical * 40 +
-            high * 25 +
-            medium * 10 +
-            low * 3;
+            findings.reduce(
+                (total, finding) =>
+                    total +
+                    RISK_DEFINITIONS[finding.code].score,
+                0
+            );
 
         return Math.min(
             score,
