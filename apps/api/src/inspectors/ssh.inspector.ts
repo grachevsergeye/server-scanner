@@ -26,21 +26,15 @@ export class SshInspector implements Inspector {
 
             client.on("banner", banner => {
 
-                resolve({
-
-                    port: port.port,
-
-                    service: port.service,
-
-                    title: "SSH",
-
-                    data: {
-
-                        banner
-
-                    }
-
-                });
+            resolve({
+                port: port.port,
+                service: port.service,
+                type: "ssh",
+                title: "SSH",
+                data: {
+                    banner
+                }
+            });
 
                 client.end();
 

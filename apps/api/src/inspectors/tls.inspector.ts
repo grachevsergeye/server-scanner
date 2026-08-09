@@ -1,20 +1,28 @@
 import tls from "node:tls";
+
 import type { ScanPort } from "../types/scan.types.js";
 import type { InspectionResult } from "./inspector.interface.js";
+
 import { CertificateParser } from "../parsers/certificate.parser.js";
 
 export class TlsInspector {
 
-    supports(port: ScanPort) {
+    supports(port: ScanPort): boolean {
 
-        return port.service === "https"
-            || port.tunnel === "ssl";
+        return (
+            port.service === "https" ||
+            port.tunnel === "ssl"
+        );
 
     }
 
-    private parser = new CertificateParser();
+    private parser =
+        new CertificateParser();
 
-    async inspect(host: string, port: ScanPort): Promise<InspectionResult> {
+    async inspect(
+        host: string,
+        port: ScanPort
+    ): Promise<InspectionResult> {
 
         return new Promise((resolve, reject) => {
 
@@ -25,15 +33,24 @@ export class TlsInspector {
                 port: port.port,
 
                 servername: host,
+
                 rejectUnauthorized: false
 
             });
 
             socket.once("secureConnect", () => {
 
-                const certificate = this.parser.parse(
-                    socket.getPeerCertificate()
-                );
+                const protocol =
+                    socket.getProtocol() ??
+                    "unknown";
+
+                const certificate =
+                    this.parser.parse(
+                        socket.getPeerCertificate()
+                    );
+
+                const cipher =
+                    socket.getCipher();
 
                 resolve({
 
@@ -41,13 +58,32 @@ export class TlsInspector {
 
                     service: port.service,
 
+                    type: "tls",
+
                     title: "TLS",
 
                     data: {
 
-                        protocol: socket.getProtocol(),
+                        protocol,
 
-                        cipher: socket.getCipher(),
+                        cipher: {
+
+                            name: cipher.name,
+
+                            ...(cipher.standardName
+                                ? {
+                                    standardName:
+                                        cipher.standardName
+                                }
+                                : {}),
+
+                            ...(cipher.version
+                                ? {
+                                    version:
+                                        cipher.version
+                                }
+                                : {})
+                        },
 
                         certificate
 
@@ -58,9 +94,12 @@ export class TlsInspector {
                 socket.end();
 
             });
-            
-            socket.once("error", reject);
-            
+
+            socket.once(
+                "error",
+                reject
+            );
+
         });
 
     }

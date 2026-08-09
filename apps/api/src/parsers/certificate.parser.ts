@@ -1,49 +1,74 @@
-import type { PeerCertificate } from "node:tls";
 import tls from "node:tls";
+
+import type { TlsInspection } from "../inspection/types.js";
 
 export class CertificateParser {
 
-    parse(cert: tls.PeerCertificate) {
+    parse(
+        cert: tls.PeerCertificate
+    ): NonNullable<TlsInspection["certificate"]> {
 
         return {
 
             subject: {
+                ...(cert.subject?.CN
+                    ? {
+                        commonName:
+                            Array.isArray(cert.subject.CN)
+                                ? cert.subject.CN[0]
+                                : cert.subject.CN
+                    }
+                    : {}),
 
-                commonName:
-                    cert.subject?.CN,
-
-                organization:
-                    cert.subject?.O
-
+                ...(cert.subject?.O
+                    ? {
+                        organization:
+                            Array.isArray(cert.subject.O)
+                                ? cert.subject.O[0]
+                                : cert.subject.O
+                    }
+                    : {})
             },
 
             issuer: {
+                ...(cert.issuer?.CN
+                    ? {
+                        commonName:
+                            Array.isArray(cert.issuer.CN)
+                                ? cert.issuer.CN[0]
+                                : cert.issuer.CN
+                    }
+                    : {}),
 
-                commonName:
-                    cert.issuer?.CN,
-
-                organization:
-                    cert.issuer?.O
-
+                ...(cert.issuer?.O
+                    ? {
+                        organization:
+                            Array.isArray(cert.issuer.O)
+                                ? cert.issuer.O[0]
+                                : cert.issuer.O
+                    }
+                    : {})
             },
 
-            validFrom:
-                cert.valid_from,
+            ...(cert.valid_from
+                ? { validFrom: cert.valid_from }
+                : {}),
 
-            validTo:
-                cert.valid_to,
+            ...(cert.valid_to
+                ? { validTo: cert.valid_to }
+                : {}),
 
-            serial:
-                cert.serialNumber,
+            ...(cert.serialNumber
+                ? { serial: cert.serialNumber }
+                : {}),
 
-            fingerprint:
-                cert.fingerprint256,
+            ...(cert.fingerprint256
+                ? { fingerprint: cert.fingerprint256 }
+                : {}),
 
-            altNames:
-                cert.subjectaltname
-
+            ...(cert.subjectaltname
+                ? { altNames: cert.subjectaltname }
+                : {})
         };
-
     }
-
 }

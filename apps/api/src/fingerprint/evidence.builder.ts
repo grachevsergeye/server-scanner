@@ -49,15 +49,39 @@ export class EvidenceBuilder {
                     evidence.status = data.status;
 
                     if (data.headers) {
-                        evidence.headers = data.headers;
+
+                        evidence.headers =
+                            Object.fromEntries(
+                                Object.entries(data.headers).map(
+                                    ([key, value]) => [
+                                        key.toLowerCase(),
+                                        value
+                                    ]
+                                )
+                            );
+
                     }
 
-                    if (data.server) {
-                        evidence.server = data.server;
+                    const server =
+                        data.server ??
+                        evidence.headers?.["server"];
+
+                    if (server) {
+                        evidence.server = server;
+                    }
+
+                    /*
+                    * Other HTTP evidence
+                    */
+
+                    if (data.poweredBy) {
+                        evidence.poweredBy =
+                            data.poweredBy;
                     }
 
                     if (data.title) {
-                        evidence.title = data.title;
+                        evidence.title =
+                            data.title;
                     }
 
                     if (data.technologies) {
@@ -148,6 +172,58 @@ export class EvidenceBuilder {
                         exists: data.exists,
                         status: data.status
                     };
+
+                    break;
+                }
+
+                /*
+                 * SSH, Redis, SMTP, FTP
+                 */
+
+                case "ssh": {
+
+                    const data = inspection.data;
+
+                    if (data.banner) {
+                        evidence.banner =
+                            data.banner;
+                    }
+
+                    break;
+                }
+
+                case "redis": {
+
+                    const data = inspection.data;
+
+                    if (data.info) {
+                        evidence.banner =
+                            data.info;
+                    }
+
+                    break;
+                }
+
+                case "smtp": {
+
+                    const data = inspection.data;
+
+                    if (data.banner) {
+                        evidence.banner =
+                            data.banner;
+                    }
+
+                    break;
+                }
+
+                case "ftp": {
+
+                    const data = inspection.data;
+
+                    if (data.currentDirectory) {
+                        evidence.welcome =
+                            data.currentDirectory;
+                    }
 
                     break;
                 }

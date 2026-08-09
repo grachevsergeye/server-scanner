@@ -39,21 +39,15 @@ export class RedisInspector implements Inspector {
 
             socket.on("end", () => {
 
-                resolve({
-
-                    port: port.port,
-
-                    service: port.service,
-
-                    title: "Redis",
-
-                    data: {
-
-                        info: data
-
-                    }
-
-                });
+            resolve({
+                port: port.port,
+                service: port.service,
+                type: "redis",
+                title: "Redis",
+                data: {
+                    info: data
+                }
+            });
 
             });
 

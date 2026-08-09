@@ -31,21 +31,15 @@ export class SmtpInspector implements Inspector {
 
             socket.once("data", data => {
 
-                resolve({
-
-                    port: port.port,
-
-                    service: port.service,
-
-                    title: "SMTP",
-
-                    data: {
-
-                        banner: data.toString()
-
-                    }
-
-                });
+            resolve({
+                port: port.port,
+                service: port.service,
+                type: "smtp",
+                title: "SMTP",
+                data: {
+                    banner: data.toString()
+                }
+            });
 
                 socket.end();
 

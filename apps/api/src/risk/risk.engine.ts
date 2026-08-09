@@ -2,11 +2,15 @@ import type { FingerprintEvidence } from "../fingerprint/evidence.types.js";
 import type { ScanPort } from "../types/scan.types.js";
 import type { PortInspections } from "../inspection/types.js";
 import type { RiskResult } from "./types.js";
+import type { ServiceFingerprint } from "../fingerprint/fingerprint.types.js";
+import type { InfrastructureAnalysis } from "../infrastructure/infrastructure.types.js";
 
 export interface PortAnalysisInput {
     port: ScanPort;
     evidence: FingerprintEvidence;
+    fingerprint: ServiceFingerprint;
     inspections: PortInspections;
+    infrastructure: InfrastructureAnalysis;
 }
 
 export class RiskEngine {
@@ -14,10 +18,22 @@ export class RiskEngine {
     analyze({
         port,
         evidence,
-        inspections
+        inspections,
+        fingerprint,
+        infrastructure
     }: PortAnalysisInput): RiskResult {
 
         switch (port.service) {
+
+            case "domain":
+                return {
+                    level: "Info",
+                    reason:
+                        fingerprint.product
+                            ? `DNS server exposed (${fingerprint.product}).`
+                            : "DNS service exposed.",
+                    code: "DNS-EXPOSED"
+                };
 
             case "redis":
                 return {
@@ -34,11 +50,17 @@ export class RiskEngine {
                 };
 
             case "mysql":
+                return {
+                    level: "High",
+                    reason: "MySQL database is publicly accessible.",
+                    code: "MYSQL-EXPOSED"
+                };
+
             case "postgresql":
                 return {
                     level: "High",
-                    reason: "Database service exposed.",
-                    code: "DATABASE-EXPOSED"
+                    reason: "PostgreSQL database is publicly accessible.",
+                    code: "POSTGRESQL-EXPOSED"
                 };
 
             case "ftp":
@@ -65,7 +87,8 @@ export class RiskEngine {
             case "http":
                 return this.analyzeHttp(
                     port,
-                    inspections
+                    inspections,
+                    infrastructure
                 );
 
             case "https":
@@ -84,12 +107,24 @@ export class RiskEngine {
 
     private analyzeHttp(
         port: ScanPort,
-        inspections: PortInspections
+        inspections: PortInspections,
+        infrastructure: InfrastructureAnalysis
     ): RiskResult {
 
+        if (
+            this.isBehindCdn(infrastructure)
+        ) {
+            return {
+                level: "Info",
+                reason:
+                    "HTTP service is exposed behind a CDN with hidden origin.",
+                code: "HTTP-CDN-EDGE"
+            };
+        }
+
         /*
-         * Nmap says SSL OR TLS inspector confirmed TLS.
-         */
+        * Nmap says SSL OR TLS inspector confirmed TLS.
+        */
         if (
             port.tunnel === "ssl" ||
             inspections.tls
@@ -102,8 +137,8 @@ export class RiskEngine {
         }
 
         /*
-         * HTTP redirects to HTTPS.
-         */
+        * HTTP redirects to HTTPS.
+        */
         if (
             this.redirectsToHttps(
                 inspections.redirects
@@ -116,9 +151,13 @@ export class RiskEngine {
             };
         }
 
+        /*
+        * Direct unencrypted HTTP.
+        */
         return {
             level: "Medium",
-            reason: "HTTP service is exposed without encryption.",
+            reason:
+                "HTTP service is exposed without encryption.",
             code: "HTTP-UNENCRYPTED"
         };
     }
@@ -170,6 +209,16 @@ export class RiskEngine {
                 }
 
             }
+        );
+    }
+
+    private isBehindCdn(
+        infrastructure: InfrastructureAnalysis
+    ): boolean {
+
+        return (
+            infrastructure.type === "cdn" &&
+            infrastructure.originVisibility === "hidden"
         );
     }
 }

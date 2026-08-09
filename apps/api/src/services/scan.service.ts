@@ -2,7 +2,7 @@ import { ScanWorker } from "../workers/scan.worker.js";
 import { NmapParser } from "../parsers/nmap.parser.js";
 import { InspectorRegistry } from "../inspectors/inspector.registry.js";
 import type { InspectionResult } from "../inspectors/inspector.interface.js";
-import { ScanAnalyzer } from "../analyzers/analyzer.service.js";
+import { ScanAnalyzer } from "../analysis/scan.analyzer.js";
 import type { FingerprintEvidence } from "../fingerprint/evidence.types.js";
 import type { ScanPort } from "../types/scan.types.js";
 
