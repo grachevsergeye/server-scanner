@@ -31,6 +31,13 @@ export class RiskEngine {
         infrastructure
     }: PortAnalysisInput): RiskResult {
 
+        if (port.state !== "open") {
+            return this.analyzeNonOpenPort(
+                port,
+                fingerprint
+            );
+        }
+
         switch (port.service) {
 
             case "domain":
@@ -42,47 +49,56 @@ export class RiskEngine {
                         : "DNS service exposed."
                 );
 
-                case "redis":
-                    return this.result(
-                        "REDIS-EXPOSED",
-                        fingerprint.confidence
-                    );
+            case "redis":
+                return this.result(
+                    "REDIS-EXPOSED",
+                    fingerprint.confidence
+                );
 
-                case "mongodb":
-                    return this.result(
-                        "MONGODB-EXPOSED",
-                        fingerprint.confidence
-                    );
+            case "mongodb":
+                return this.result(
+                    "MONGODB-EXPOSED",
+                    fingerprint.confidence
+                );
 
-                case "mysql":
-                    return this.result(
-                        "MYSQL-EXPOSED",
-                        fingerprint.confidence
-                    );
+            case "mysql":
+                return this.result(
+                    "MYSQL-EXPOSED",
+                    fingerprint.confidence,
+                    fingerprint.product
+                        ? `MySQL-compatible database exposed (${fingerprint.product}).`
+                        : "MySQL-compatible database exposed."
+                );
 
-                case "postgresql":
-                    return this.result(
-                        "POSTGRESQL-EXPOSED",
-                        fingerprint.confidence
-                    );
+            case "postgresql":
+                return this.result(
+                    "POSTGRESQL-EXPOSED",
+                    fingerprint.confidence
+                );
 
-                case "ftp":
-                    return this.result(
-                        "FTP-UNENCRYPTED",
-                        fingerprint.confidence
-                    );
+            case "memcached":
+                return this.result(
+                    "MEMCACHED-EXPOSED",
+                    fingerprint.confidence
+                );
 
-                case "telnet":
-                    return this.result(
-                        "TELNET-INSECURE",
-                        fingerprint.confidence
-                    );
+            case "ftp":
+                return this.result(
+                    "FTP-UNENCRYPTED",
+                    fingerprint.confidence
+                );
 
-                case "ssh":
-                    return this.result(
-                        "SSH-EXPOSED",
-                        fingerprint.confidence
-                    );
+            case "telnet":
+                return this.result(
+                    "TELNET-INSECURE",
+                    fingerprint.confidence
+                );
+
+            case "ssh":
+                return this.result(
+                    "SSH-EXPOSED",
+                    fingerprint.confidence
+                );
 
             case "http":
                 return this.analyzeHttp(
@@ -100,7 +116,7 @@ export class RiskEngine {
             default:
                 return this.result(
                     "UNKNOWN-SERVICE",
-                    50
+                    fingerprint.confidence
                 );
         }
     }
@@ -127,6 +143,27 @@ export class RiskEngine {
 
             confidence
         };
+    }
+
+    private analyzeNonOpenPort(
+        port: ScanPort,
+        fingerprint: ServiceFingerprint
+    ): RiskResult {
+
+        if (port.state === "filtered") {
+
+            return this.result(
+                "PORT-FILTERED",
+                95,
+                `Port ${port.port}/${port.protocol} is filtered by a firewall or packet filter.`
+            );
+        }
+
+        return this.result(
+            "PORT-CLOSED",
+            95,
+            `Port ${port.port}/${port.protocol} is closed.`
+        );
     }
 
     private analyzeHttp(

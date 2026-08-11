@@ -3,8 +3,8 @@ export interface ServiceFingerprint {
 
     service: string;
 
-    product: string;
-    version: string;
+    product?: string;
+    version?: string;
 
     confidence: number;
 

@@ -7,7 +7,11 @@ import type {
     FtpInspection,
     SshInspection,
     RedisInspection,
-    SmtpInspection
+    SmtpInspection,
+    MysqlInspection,
+    PostgreSqlInspection,
+    MemcachedInspection,
+    MongoDbInspection
 } from "../inspection/types.js";
 
 export type InspectionType =
@@ -17,9 +21,13 @@ export type InspectionType =
     | "favicon"
     | "robots"
     | "ssh"
-    | "redis"
     | "ftp"
-    | "smtp";
+    | "smtp"
+    | "redis"
+    | "mysql"
+    | "postgresql"
+    | "mongodb"
+    | "memcached";
 
 export interface FaviconInspection {
 
@@ -112,28 +120,61 @@ export type SshInspectionResult =
         data: SshInspection;
     };
 
-export type RedisInspectionResult =
-    BaseInspectionResult & {
-
-        type: "redis";
-
-        data: RedisInspection;
-    };
-
+    
 export type FtpInspectionResult =
     BaseInspectionResult & {
-
+        
         type: "ftp";
-
+        
         data: FtpInspection;
     };
-
+    
 export type SmtpInspectionResult =
     BaseInspectionResult & {
-
+        
         type: "smtp";
-
+        
         data: SmtpInspection;
+    };
+
+export type RedisInspectionResult =
+    BaseInspectionResult & {
+    
+        type: "redis";
+    
+         data: RedisInspection;
+    };
+
+export type MongodbInspectionResult =
+    BaseInspectionResult & {
+    
+        type: "mongodb";
+    
+        data: MongoDbInspection;
+    };
+
+export type MemcachedInspectionResult =
+    BaseInspectionResult & {
+    
+        type: "memcached";
+    
+        data: MemcachedInspection;
+    };
+
+export type PostgreSQLInspectionResult =
+    BaseInspectionResult & {
+    
+        type: "postgresql";
+    
+        data: PostgreSqlInspection;
+    };
+
+export type MySQLInspectionResult =
+    BaseInspectionResult & {
+    
+        type: "mysql";
+    
+        data: MysqlInspection;
     };
 
 export type InspectionResult =
@@ -143,9 +184,13 @@ export type InspectionResult =
     | FaviconInspectionResult
     | RobotsInspectionResult
     | SshInspectionResult
-    | RedisInspectionResult
     | FtpInspectionResult
-    | SmtpInspectionResult;
+    | SmtpInspectionResult
+    | RedisInspectionResult
+    | MongodbInspectionResult
+    | MemcachedInspectionResult
+    | PostgreSQLInspectionResult
+    | MySQLInspectionResult;
 
 export interface Inspector {
 

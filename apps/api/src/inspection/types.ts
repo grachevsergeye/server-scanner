@@ -93,8 +93,44 @@ export interface SshInspection {
 }
 
 export interface RedisInspection {
+    protocol?: string;
+
+    version?: string;
+
+    authentication?: {
+        required?: boolean;
+        mechanism?: string;
+    };
+
+    tls?: {
+        supported?: boolean;
+    };
 
     info?: string;
+}
+
+export interface MysqlInspection
+    extends DatabaseInspectionData {
+
+    authenticationPlugin?: string;
+}
+
+export interface PostgreSqlInspection
+    extends DatabaseInspectionData {
+
+    protocolVersion?: string;
+}
+
+export interface MongoDbInspection
+    extends DatabaseInspectionData {
+
+    wireProtocol?: string;
+}
+
+export interface MemcachedInspection
+    extends DatabaseInspectionData {
+
+    protocolType?: "text" | "binary";
 }
 
 export interface SmtpInspection {
@@ -105,20 +141,38 @@ export interface SmtpInspection {
 export interface PortInspections {
 
     http?: HttpInspection;
-
     redirects?: RedirectInspection;
-
     tls?: TlsInspection;
-
     favicon?: FaviconInspection;
-
     robots?: RobotsInspection;
 
     ftp?: FtpInspection;
-
     ssh?: SshInspection;
+    smtp?: SmtpInspection;
 
     redis?: RedisInspection;
 
-    smtp?: SmtpInspection;
+    mysql?: MysqlInspection;
+    postgresql?: PostgreSqlInspection;
+    mongodb?: MongoDbInspection;
+    memcached?: MemcachedInspection;
+}
+
+export interface DatabaseInspectionData {
+    protocol?: string;
+
+    product?: string;
+
+    version?: string;
+
+    banner?: string;
+
+    authentication?: {
+        required?: boolean;
+        mechanism?: string;
+    };
+
+    tls?: {
+        supported?: boolean;
+    };
 }

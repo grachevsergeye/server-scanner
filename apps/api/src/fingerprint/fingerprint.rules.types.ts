@@ -3,11 +3,17 @@ import type { FingerprintEvidence } from "./evidence.types.js";
 export interface FingerprintRule {
     id: string;
 
-    services?: string[];
+    services: string[];
 
-    match(evidence: FingerprintEvidence): boolean;
+    fallback?: boolean;
 
-    score(evidence: FingerprintEvidence): number;
+    match: (
+        evidence: FingerprintEvidence
+    ) => boolean;
+
+    confidence: (
+        evidence: FingerprintEvidence
+    ) => number;
 
     result: {
         vendor: string;

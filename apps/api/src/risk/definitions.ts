@@ -8,6 +8,23 @@ export interface RiskDefinition {
 }
 
 export const RISK_DEFINITIONS = {
+
+    "PORT-FILTERED": {
+        title: "",
+        level: "Info",
+        reason:
+            "The port is filtered and its service exposure could not be confirmed.",
+        score: 0
+    },
+
+    "PORT-CLOSED": {
+        title: "",
+        level: "Info",
+        reason:
+            "The port is closed and no service is currently accepting connections.",
+        score: 0
+    },
+
     "DNS-EXPOSED": {
         title: "DNS server exposed",
         reason: "A DNS service is publicly accessible.",
@@ -67,6 +84,14 @@ export const RISK_DEFINITIONS = {
         title: "Redis publicly exposed",
         reason:
             "A Redis database is directly accessible from the Internet.",
+        level: "Critical",
+        score: 40
+    },
+
+    "MEMCACHED-EXPOSED": {
+        title: "Memcached publicly exposed",
+        reason:
+            "A Memcached database is directly accessible from the Internet.",
         level: "Critical",
         score: 40
     },

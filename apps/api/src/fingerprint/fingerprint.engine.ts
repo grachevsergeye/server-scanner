@@ -19,57 +19,50 @@ export class FingerprintEngine {
         evidence: FingerprintEvidence
     ): ServiceFingerprint {
 
-        /*
-         * Find matching rules
-         */
+        const matchedRules =
+            FingerprintRules
+                .filter(rule => {
 
-        const matchedRules = FingerprintRules
-            .filter(rule => {
+                    if (
+                        rule.services &&
+                        !rule.services.includes(
+                            evidence.service
+                        )
+                    ) {
+                        return false;
+                    }
 
-                /*
-                 * Service-specific rules
-                 */
+                    return rule.match(evidence);
+                })
+                .map(rule => ({
+                    rule,
+                    confidence:
+                        rule.confidence(evidence)
+                }))
+                .filter(
+                    ({ confidence }) =>
+                        confidence > 0
+                )
+                .sort(
+                    (a, b) =>
+                        b.confidence -
+                        a.confidence
+                );
 
-                if (
-                    rule.services &&
-                    !rule.services.includes(evidence.service)
-                ) {
-                    return false;
-                }
-
-                /*
-                 * Evidence match
-                 */
-
-                return rule.match(evidence);
-            })
-            .map(rule => ({
-                rule,
-                score: rule.score(evidence)
-            }))
-            .filter(
-                ({ score }) => score > 0
-            )
-            .sort(
-                (a, b) =>
-                    b.score - a.score
-            );
-
-        /*
-         * Unknown service
-         */
-
-        if (matchedRules.length === 0) {
-
+        if (
+            matchedRules.length === 0
+        ) {
             return {
 
                 port: port.port,
 
                 service: port.service,
 
-                product: port.product,
+                product:
+                    port.product,
 
-                version: port.version,
+                version:
+                    port.version,
 
                 confidence: 0,
 
@@ -81,49 +74,39 @@ export class FingerprintEngine {
                     evidence.technologies ?? [],
 
                 evidence: []
-
             };
         }
 
-        /*
-         * Calculate fingerprint confidence
-         */
+        const specificRules =
+            matchedRules.filter(
+                ({ rule }) =>
+                    !rule.fallback
+            );
 
-        const score = matchedRules.reduce(
-            (total, matched) => total + matched.score,
-            0
-        );
-
-        const confidence = Math.min(score, 100);
-
-        /*
-         * Highest scoring rule
-         * becomes primary fingerprint
-         */
+        const usableRules =
+            specificRules.length > 0
+                ? specificRules
+                : matchedRules;
 
         const primary =
-            matchedRules[0]!;
-
-        /*
-         * Rule product takes precedence
-         * over Nmap product
-         */
-
-        const product =
-            primary.rule.result.product ??
-            port.product;
+            usableRules[0]!;
 
         return {
 
             port: port.port,
 
-            service: port.service,
+            service:
+                port.service,
 
-            product,
+            product:
+                primary.rule.result.product ??
+                port.product,
 
-            version: port.version,
+            version:
+                port.version,
 
-            confidence,
+            confidence:
+                primary.confidence,
 
             vendor:
                 primary.rule.result.vendor,
@@ -131,16 +114,14 @@ export class FingerprintEngine {
             category:
                 primary.rule.result.category,
 
-            technologies: [
-                ...(evidence.technologies ?? [])
-            ],
+            technologies:
+                evidence.technologies ?? [],
 
             evidence:
-                matchedRules.map(
-                    ({ rule, score }) =>
-                        `${rule.id} (+${score})`
+                usableRules.map(
+                    ({ rule, confidence }) =>
+                        `${rule.id} (${confidence}%)`
                 )
-
         };
     }
 }

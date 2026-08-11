@@ -5,7 +5,9 @@ import type {
     InspectionResult
 } from "./inspector.interface.js";
 
-import type { ScanPort } from "../types/scan.types.js";
+import type {
+    ScanPort
+} from "../types/scan.types.js";
 
 export class SshInspector implements Inspector {
 
@@ -24,23 +26,88 @@ export class SshInspector implements Inspector {
 
             const client = new Client();
 
+            let resolved = false;
+
+            const finish = (
+                result: InspectionResult
+            ) => {
+
+                if (resolved) {
+                    return;
+                }
+
+                resolved = true;
+
+                client.end();
+
+                resolve(result);
+            };
+
             client.on("banner", banner => {
 
-            resolve({
-                port: port.port,
-                service: port.service,
-                type: "ssh",
-                title: "SSH",
-                data: {
-                    banner
-                }
+                finish({
+                    port: port.port,
+
+                    service: port.service,
+
+                    type: "ssh",
+
+                    title: "SSH",
+
+                    data: {
+                        banner: banner.toString()
+                    }
+                });
+
             });
+
+            client.on("ready", () => {
 
                 client.end();
 
             });
 
-            client.on("error", reject);
+            client.on("error", error => {
+
+                if (
+                    resolved
+                ) {
+                    return;
+                }
+
+                const message =
+                    error instanceof Error
+                        ? error.message
+                        : String(error);
+
+                if (
+                    message
+                        .toLowerCase()
+                        .includes(
+                            "authentication methods failed"
+                        )
+                ) {
+
+                    client.end();
+
+                    resolve({
+                        port: port.port,
+
+                        service: port.service,
+
+                        type: "ssh",
+
+                        title: "SSH",
+
+                        data: {}
+                    });
+
+                    return;
+                }
+
+                reject(error);
+
+            });
 
             client.connect({
 
@@ -48,12 +115,13 @@ export class SshInspector implements Inspector {
 
                 port: port.port,
 
-                username: "anonymous"
+                username: "anonymous",
+
+                readyTimeout: 5000
 
             });
 
         });
 
     }
-
 }
