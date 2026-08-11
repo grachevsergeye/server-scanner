@@ -30,15 +30,43 @@ export class ScanService {
         const result =
             this.parser.parse(xml);
 
+        console.log(
+            "[ScanService] parsed ports:",
+            result.ports.map(port => ({
+                port: port.port,
+                state: port.state,
+                service: port.service,
+                product: port.product,
+                version: port.version,
+                nmapConfidence: port.nmapConfidence
+            }))
+        );
+
         const inspections: InspectionResult[] = [];
 
         for (const port of result.ports) {
+
+            console.log(
+                `[ScanService] checking inspectors for ${port.port}/${port.service}`,
+                {
+                    state: port.state,
+                    service: port.service
+                }
+            );
 
             const matchingInspectors =
                 this.inspectors.all.filter(
                     inspector =>
                         inspector.supports(port)
                 );
+
+            console.log(
+                `[ScanService] matched inspectors for ${port.port}:`,
+                matchingInspectors.map(
+                    inspector =>
+                        inspector.constructor.name
+                )
+            );
 
             for (
                 const inspector
@@ -47,11 +75,23 @@ export class ScanService {
 
                 try {
 
-                    inspections.push(
+                    console.log(
+                        `[ScanService] running ${inspector.constructor.name} on ${result.host}:${port.port}`
+                    );
+
+                    const inspection =
                         await inspector.inspect(
                             result.host,
                             port
-                        )
+                        );
+
+                    console.log(
+                        `[ScanService] inspection result ${result.host}:${port.port}:`,
+                        inspection
+                    );
+
+                    inspections.push(
+                        inspection
                     );
 
                 } catch (error) {
@@ -67,8 +107,13 @@ export class ScanService {
 
         }
 
+        console.log(
+            "[ScanService] all inspections:",
+            inspections
+        );
+
         const analysis =
-            await this.analyzer.analyze(
+            this.analyzer.analyze(
                 result,
                 inspections
             );

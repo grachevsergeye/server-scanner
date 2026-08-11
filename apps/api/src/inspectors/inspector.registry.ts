@@ -55,8 +55,6 @@ export class InspectorRegistry {
 
         new MongoDbInspector(),
 
-        new RedirectInspector(),
-
         new MemcachedInspector()
 
     ];

@@ -113,6 +113,8 @@ export interface MysqlInspection
     extends DatabaseInspectionData {
 
     authenticationPlugin?: string;
+
+    errorCode?: number;
 }
 
 export interface PostgreSqlInspection

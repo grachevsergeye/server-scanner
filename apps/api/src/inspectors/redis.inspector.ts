@@ -1,14 +1,29 @@
 import net from "node:net";
 
-import type { Inspector, InspectionResult } from "./inspector.interface.js";
-import type { ScanPort } from "../types/scan.types.js";
+import type {
+    Inspector,
+    InspectionResult
+} from "./inspector.interface.js";
 
-export class RedisInspector implements Inspector {
+import type {
+    ScanPort
+} from "../types/scan.types.js";
 
-    supports(port: ScanPort): boolean {
+import type {
+    RedisInspection
+} from "../inspection/types.js";
 
-        return port.service === "redis";
+export class RedisInspector
+    implements Inspector {
 
+    supports(
+        port: ScanPort
+    ): boolean {
+
+        return (
+            port.service === "redis" &&
+            port.state === "open"
+        );
     }
 
     inspect(
@@ -16,53 +31,121 @@ export class RedisInspector implements Inspector {
         port: ScanPort
     ): Promise<InspectionResult> {
 
-        return new Promise((resolve, reject) => {
+        return new Promise(
+            (resolve, reject) => {
 
-            const socket = net.createConnection({
+                const socket =
+                    net.createConnection({
+                        host,
+                        port: port.port,
+                        timeout: 5000
+                    });
 
-                host,
-                port: port.port
+                let finished = false;
 
-            });
+                let data =
+                    Buffer.alloc(0);
 
-            socket.setTimeout(5000);
+                const finish = (
+                    result: InspectionResult
+                ) => {
 
-            socket.write("INFO\r\n");
+                    if (finished) {
+                        return;
+                    }
 
-            let data = "";
+                    finished = true;
 
-            socket.on("data", chunk => {
+                    socket.destroy();
 
-                data += chunk.toString();
+                    resolve(result);
+                };
 
-            });
+                socket.on(
+                    "connect",
+                    () => {
 
-            socket.on("end", () => {
+                        socket.write(
+                            "INFO\r\n"
+                        );
+                    }
+                );
 
-            resolve({
-                port: port.port,
-                service: port.service,
-                type: "redis",
-                title: "Redis",
-                data: {
-                    info: data
-                }
-            });
+                socket.on(
+                    "data",
+                    chunk => {
 
-            });
+                        data =
+                            Buffer.concat([
+                                data,
+                                Buffer.isBuffer(chunk)
+                                    ? chunk
+                                    : Buffer.from(chunk)
+                            ]);
 
-            socket.on("timeout", () => {
+                        finish({
+                            port: port.port,
+                            service: "redis",
+                            type: "redis",
+                            title: "Redis",
+                            data: this.parseResponse(data)
+                        });
+                    }
+                );
 
-                socket.destroy();
+                socket.on(
+                    "timeout",
+                    () => {
 
-                reject(new Error("Redis timeout"));
+                        if (finished) {
+                            return;
+                        }
 
-            });
+                        socket.destroy();
 
-            socket.on("error", reject);
+                        reject(
+                            new Error(
+                                "Redis inspection timeout"
+                            )
+                        );
+                    }
+                );
 
-        });
+                socket.on(
+                    "error",
+                    error => {
 
+                        if (!finished) {
+                            reject(error);
+                        }
+                    }
+                );
+            }
+        );
     }
 
+    private parseResponse(
+        buffer: Buffer
+    ): RedisInspection {
+
+        const response =
+            buffer.toString("utf8");
+
+        const versionMatch =
+            response.match(
+                /redis_version:([^\r\n]+)/i
+            );
+
+        return {
+            info:
+                response,
+
+            ...(versionMatch
+                ? {
+                    version:
+                        versionMatch[1]
+                }
+                : {})
+        };
+    }
 }

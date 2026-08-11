@@ -1,51 +1,88 @@
 import { XMLParser } from "fast-xml-parser";
+
 import type {
     ScanPort,
     ScanResult,
 } from "../types/scan.types.js";
 
 export class NmapParser {
-    private parser = new XMLParser({
-        ignoreAttributes: false,
-        attributeNamePrefix: "",
-    });
+
+    private parser =
+        new XMLParser({
+            ignoreAttributes: false,
+            attributeNamePrefix: "",
+        });
 
     parse(xml: string): ScanResult {
-        const data = this.parser.parse(xml);
 
-        const host = data.nmaprun.host;
+        const data =
+            this.parser.parse(xml);
 
-        const ports = Array.isArray(host.ports.port)
-        ? host.ports.port
-        : [host.ports.port];
+        const host =
+            data.nmaprun.host;
 
-        const parsedPorts: ScanPort[] = ports.map((port: any) => ({
-            port: Number(port.portid),
+        const rawPorts =
+            host.ports?.port ?? [];
 
-            protocol: port.protocol,
+        const ports =
+            Array.isArray(rawPorts)
+                ? rawPorts
+                : [rawPorts];
 
-            state: port.state.state,
+        const parsedPorts: ScanPort[] =
+            ports.map(
+                (port: any) => ({
 
-            service: port.service?.name ?? "",
+                    port:
+                        Number(port.portid),
 
-            product: port.service?.product ?? "",
+                    protocol:
+                        port.protocol,
 
-            version: port.service?.version ?? "",
+                    state:
+                        port.state?.state ?? "unknown",
 
-            extraInfo: port.service?.extrainfo ?? "",
+                    service:
+                        port.service?.name ?? "",
 
-            tunnel: port.service?.tunnel ?? "",
+                    product:
+                        port.service?.product ?? "",
 
-            confidence: Number(port.service?.conf ?? 0),
-        }));
+                    version:
+                        port.service?.version ?? "",
 
-    return {
-        host: host.address.addr,
+                    extraInfo:
+                        port.service?.extrainfo ?? "",
 
-        hostname: host.hostnames?.hostname?.name ?? "",
+                    tunnel:
+                        port.service?.tunnel ?? "",
 
-        ports: parsedPorts,
-    };
-    
+                    confidence:
+                        Number(
+                            port.service?.conf ?? 0
+                        ),
+
+                    nmapConfidence:
+                        Number(
+                            port.service?.conf ?? 0
+                        )
+
+                })
+            );
+
+        return {
+
+            host:
+                host.address.addr,
+
+            hostname:
+                host.hostnames?.hostname?.name ?? "",
+
+            ports:
+                parsedPorts
+
+        };
+
     }
+
 }

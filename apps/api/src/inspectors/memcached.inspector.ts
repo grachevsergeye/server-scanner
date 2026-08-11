@@ -9,12 +9,16 @@ import type {
     ScanPort
 } from "../types/scan.types.js";
 
-import type { MemcachedInspection } from "../inspection/types.js";
+import type {
+    MemcachedInspection
+} from "../inspection/types.js";
 
 export class MemcachedInspector
     implements Inspector {
 
-    supports(port: ScanPort): boolean {
+    supports(
+        port: ScanPort
+    ): boolean {
 
         return (
             port.service === "memcached" &&
@@ -56,23 +60,73 @@ export class MemcachedInspector
                 socket.setTimeout(5000);
 
                 socket.on(
-                    "data",
-                    buffer => {
+                    "connect",
+                    () => {
 
-                    const data =
-                        this.parseHandshake(
-                            Buffer.isBuffer(buffer)
-                                ? buffer
-                                : Buffer.from(buffer)
+                        socket.write(
+                            "version\r\n"
                         );
+                    }
+                );
 
-                        finish({
-                            port: port.port,
-                            service: "memcached",
-                            type: "memcached",
-                            title: "Memcached",
-                            data
-                        });
+                let data =
+                    Buffer.alloc(0);
+
+                socket.on(
+                    "data",
+                    chunk => {
+
+                        data =
+                            Buffer.concat([
+                                data,
+                                Buffer.isBuffer(chunk)
+                                    ? chunk
+                                    : Buffer.from(chunk)
+                            ]);
+
+                        const text =
+                            data.toString("utf8");
+
+                        if (
+                            text.startsWith(
+                                "VERSION "
+                            )
+                        ) {
+
+                            const inspection =
+                                this.parseResponse(
+                                    text
+                                );
+
+                            finish({
+                                port: port.port,
+                                service: "memcached",
+                                type: "memcached",
+                                title: "Memcached",
+                                data: inspection
+                            });
+                        }
+
+                        if (
+                            text.includes(
+                                "ERROR"
+                            ) ||
+                            text.includes(
+                                "CLIENT_ERROR"
+                            )
+                        ) {
+
+                            finish({
+                                port: port.port,
+                                service: "memcached",
+                                type: "memcached",
+                                title: "Memcached",
+                                data: {
+                                    protocolType:
+                                        "text"
+                                }
+                            });
+                        }
                     }
                 );
 
@@ -101,76 +155,30 @@ export class MemcachedInspector
                         }
                     }
                 );
-
             }
         );
     }
 
-    private parseHandshake(
-        buffer: Buffer
+    private parseResponse(
+        text: string
     ): MemcachedInspection {
 
-        if (buffer.length < 5) {
-            return {};
-        }
-
-        const payloadLength =
-            buffer.readUIntLE(
-                0,
-                3
+        const match =
+            text.match(
+                /^VERSION\s+([^\r\n]+)/i
             );
-
-        const payloadStart = 4;
-
-        const payloadEnd =
-            Math.min(
-                payloadStart +
-                    payloadLength,
-                buffer.length
-            );
-
-        const payload =
-            buffer.subarray(
-                payloadStart,
-                payloadEnd
-            );
-
-        if (payload.length < 2) {
-            return {};
-        }
-
-        const protocolByte = payload[0];
-
-        const protocol =
-            protocolByte === 0x80
-                ? "binary"
-                : protocolByte === 0x00
-                    ? "text"
-                    : "unknown";
-
-        const versionEnd =
-            payload.indexOf(
-                0,
-                1
-            );
-
-        if (versionEnd === -1) {
-            return {
-                protocol
-            };
-        }
-
-        const version =
-            payload
-                .subarray(
-                    1,
-                    versionEnd
-                )
-                .toString("utf8");
 
         return {
-            protocol,
-            version
+
+            protocolType:
+                "text",
+
+            ...(match
+                ? {
+                    version:
+                        match[1]
+                }
+                : {})
         };
     }
 }

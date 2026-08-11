@@ -9,12 +9,17 @@ import type {
     ScanPort
 } from "../types/scan.types.js";
 
-import type { PostgreSqlInspection } from "../inspection/types.js";
+import type {
+    PostgreSqlInspection
+} from "../inspection/types.js";
 
 export class PostgreSqlInspector
     implements Inspector {
 
-    supports(port: ScanPort): boolean {
+    supports(
+        port: ScanPort
+    ): boolean {
+
         return (
             port.service === "postgresql" &&
             port.state === "open"
@@ -55,15 +60,28 @@ export class PostgreSqlInspector
                 socket.setTimeout(5000);
 
                 socket.on(
+                    "connect",
+                    () => {
+
+                        const startup =
+                            this.createStartupMessage();
+
+                        socket.write(
+                            startup
+                        );
+                    }
+                );
+
+                socket.on(
                     "data",
                     buffer => {
 
-                    const data =
-                        this.parseHandshake(
-                            Buffer.isBuffer(buffer)
-                                ? buffer
-                                : Buffer.from(buffer)
-                        );
+                        const data =
+                            this.parseResponse(
+                                Buffer.isBuffer(buffer)
+                                    ? buffer
+                                    : Buffer.from(buffer)
+                            );
 
                         finish({
                             port: port.port,
@@ -100,76 +118,149 @@ export class PostgreSqlInspector
                         }
                     }
                 );
-
             }
         );
     }
 
-    private parseHandshake(
+    private createStartupMessage(): Buffer {
+
+        const body =
+            Buffer.from(
+                "user\0scanner\0database\0postgres\0\0",
+                "utf8"
+            );
+
+        const length =
+            4 +
+            body.length;
+
+        const packet =
+            Buffer.alloc(
+                4 + length
+            );
+
+        packet.writeUInt32BE(
+            length,
+            0
+        );
+
+        packet.writeUInt32BE(
+            196608,
+            4
+        );
+
+        body.copy(
+            packet,
+            8
+        );
+
+        return packet;
+    }
+
+    private parseResponse(
         buffer: Buffer
     ): PostgreSqlInspection {
 
         if (buffer.length < 5) {
-            return {};
-        }
-
-        const payloadLength =
-            buffer.readUIntLE(
-                0,
-                3
-            );
-
-        const payloadStart = 4;
-
-        const payloadEnd =
-            Math.min(
-                payloadStart +
-                    payloadLength,
-                buffer.length
-            );
-
-        const payload =
-            buffer.subarray(
-                payloadStart,
-                payloadEnd
-            );
-
-        if (payload.length < 2) {
-            return {};
-        }
-
-        const protocolByte = payload[0];
-
-        const protocol =
-            protocolByte === 0x80
-                ? "binary"
-                : protocolByte === 0x00
-                    ? "text"
-                    : "unknown";
-
-        const versionEnd =
-            payload.indexOf(
-                0,
-                1
-            );
-
-        if (versionEnd === -1) {
             return {
-                protocol
+                protocolVersion: "3.0"
             };
         }
 
-        const version =
-            payload
-                .subarray(
-                    1,
-                    versionEnd
-                )
-                .toString("utf8");
+        const messageType =
+            String.fromCharCode(
+                buffer[0]
+            );
+
+        const messageLength =
+            buffer.readUInt32BE(
+                1
+            );
+
+        if (
+            messageType === "R" &&
+            buffer.length >= 9
+        ) {
+
+            const authType =
+                buffer.readUInt32BE(
+                    5
+                );
+
+            return {
+
+                protocolVersion: "3.0",
+
+                authentication: {
+                    required: true,
+                    mechanism:
+                        this.authenticationMechanism(
+                            authType
+                        )
+                }
+            };
+        }
+
+        if (
+            messageType === "E"
+        ) {
+
+            return {
+
+                protocolVersion: "3.0",
+
+                authentication: {
+                    required: true
+                },
+
+                banner:
+                    "PostgreSQL ErrorResponse"
+            };
+        }
+
+        /*
+         * ParameterStatus
+         */
+        if (
+            messageType === "S"
+        ) {
+
+            return {
+                protocolVersion: "3.0"
+            };
+        }
 
         return {
-            protocol,
-            version
+            protocolVersion: "3.0"
         };
+    }
+
+    private authenticationMechanism(
+        type: number
+    ): string {
+
+        switch (type) {
+
+            case 0:
+                return "ok";
+
+            case 2:
+                return "cleartext";
+
+            case 3:
+                return "md5";
+
+            case 5:
+                return "gss";
+
+            case 6:
+                return "sspi";
+
+            case 7:
+                return "sasl";
+
+            default:
+                return `unknown-${type}`;
+        }
     }
 }

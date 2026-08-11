@@ -9,7 +9,9 @@ import type {
     ScanPort
 } from "../types/scan.types.js";
 
-import type { MysqlInspection } from "../inspection/types.js";
+import type {
+    MysqlInspection
+} from "../inspection/types.js";
 
 export class MysqlInspector
     implements Inspector {
@@ -61,12 +63,12 @@ export class MysqlInspector
                     "data",
                     buffer => {
 
-                    const data =
-                        this.parseHandshake(
-                            Buffer.isBuffer(buffer)
-                                ? buffer
-                                : Buffer.from(buffer)
-                        );
+                        const data =
+                            this.parseHandshake(
+                                Buffer.isBuffer(buffer)
+                                    ? buffer
+                                    : Buffer.from(buffer)
+                            );
 
                         finish({
                             port: port.port,
@@ -103,7 +105,6 @@ export class MysqlInspector
                         }
                     }
                 );
-
             }
         );
     }
@@ -117,17 +118,16 @@ export class MysqlInspector
         }
 
         const payloadLength =
-            buffer.readUIntLE(
-                0,
-                3
-            );
+            buffer.readUIntLE(0, 3);
+
+        const sequenceId =
+            buffer[3];
 
         const payloadStart = 4;
 
         const payloadEnd =
             Math.min(
-                payloadStart +
-                    payloadLength,
+                payloadStart + payloadLength,
                 buffer.length
             );
 
@@ -137,42 +137,53 @@ export class MysqlInspector
                 payloadEnd
             );
 
-        if (payload.length < 2) {
+        if (payload.length === 0) {
             return {};
         }
 
-        const protocolByte = payload[0];
+        const packetType =
+            payload[0];
 
-        const protocol =
-            protocolByte === 0x80
-                ? "binary"
-                : protocolByte === 0x00
-                    ? "text"
-                    : "unknown";
+        if (packetType === 0xff) {
 
-        const versionEnd =
-            payload.indexOf(
-                0,
-                1
-            );
+            const result: MysqlInspection = {
+                protocol: "mysql-error"
+            };
 
-        if (versionEnd === -1) {
+            if (payload.length >= 3) {
+                result.errorCode =
+                    payload.readUInt16LE(1);
+            }
+
+            return result;
+        }
+
+        if (packetType === 0x0a) {
+
+            const versionEnd =
+                payload.indexOf(0, 1);
+
+            if (versionEnd === -1) {
+
+                return {
+                    protocol: "mysql-10"
+                };
+
+            }
+
+            const version =
+                payload
+                    .subarray(1, versionEnd)
+                    .toString("utf8");
+
             return {
-                protocol
+                protocol: "mysql-10",
+                version
             };
         }
 
-        const version =
-            payload
-                .subarray(
-                    1,
-                    versionEnd
-                )
-                .toString("utf8");
-
         return {
-            protocol,
-            version
+            protocol: `mysql-${packetType}`
         };
     }
 }

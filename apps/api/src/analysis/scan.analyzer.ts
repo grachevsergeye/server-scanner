@@ -94,6 +94,26 @@ export class ScanAnalyzer {
                         inspection.data;
                     break;
 
+                case "mongodb":
+                    result.mongodb =
+                        inspection.data;
+                    break;
+
+                case "postgresql":
+                    result.postgresql =
+                        inspection.data;
+                    break;
+
+                case "memcached":
+                    result.memcached =
+                        inspection.data;
+                    break;
+
+                case "mysql":
+                    result.mysql =
+                        inspection.data;
+                    break;
+
                 case "smtp":
                     result.smtp =
                         inspection.data;

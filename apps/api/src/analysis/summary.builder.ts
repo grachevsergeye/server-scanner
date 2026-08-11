@@ -16,7 +16,15 @@ export class SummaryBuilder {
             new Set<string>();
 
         let webServices = 0;
-        let databaseServices = 0;
+        const databaseServices = ports.filter(port =>
+            [
+                "mysql",
+                "postgresql",
+                "mongodb",
+                "redis",
+                "memcached"
+            ].includes(port.port.service)
+        ).length;
 
         const risk = {
             critical: 0,
@@ -70,15 +78,6 @@ export class SummaryBuilder {
                 service === "https"
             ) {
                 webServices++;
-            }
-
-            if (
-                service === "mysql" ||
-                service === "postgresql" ||
-                service === "mongodb" ||
-                service === "redis"
-            ) {
-                databaseServices++;
             }
         }
 
