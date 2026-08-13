@@ -1,9 +1,9 @@
 import type { FastifyInstance } from "fastify";
-import { ScanService } from "../services/scan.service.js";
+import { ScannerService } from "../services/scan.service.js";
 
 export async function scanRoutes(fastify: FastifyInstance) {
 
-const scanService = new ScanService();
+const ScannerService = new ScannerService();
 
     fastify.post("/scan", async (req, reply) => {
 
@@ -11,7 +11,7 @@ const scanService = new ScanService();
             ip: string;
         };
 
-        const result = await scanService.scan(body);
+        const result = await ScannerService.scan(body);
 
         return result;
 

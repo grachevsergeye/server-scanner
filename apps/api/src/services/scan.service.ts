@@ -1,141 +1,128 @@
-import { ScanWorker } from "../workers/scan.worker.js";
-import { NmapParser } from "../parsers/nmap.parser.js";
-import { InspectorRegistry } from "../inspectors/inspector.registry.js";
-import type { InspectionResult } from "../inspectors/inspector.interface.js";
-import { ScanAnalyzer } from "../analysis/scan.analyzer.js";
-import type { FingerprintEvidence } from "../fingerprint/evidence.types.js";
-import type { ScanPort } from "../types/scan.types.js";
+import type {
+    ScanTarget,
+} from "../types/scan.types.js";
 
-export interface ScanRequest {
-    ip: string;
+import type {
+    ScanJobRepository,
+} from "../database/repositories/scan-job.repository.js";
+
+import type {
+    ScanTargetRepository,
+} from "../database/repositories/scan-target.repository.js";
+
+import { scanQueue } from "../scanner/scan.queue.js";
+import { expandTargets } from "../scanner/target-expander.js";
+
+export interface CreateScanJobRequest {
+    targets: string[];
 }
 
-export class ScanService {
+export class ScannerService {
 
-    private worker = new ScanWorker();
+    constructor(
 
-    private parser = new NmapParser();
+        private readonly jobRepository:
+            ScanJobRepository,
 
-    private inspectors =
-        new InspectorRegistry();
+        private readonly targetRepository:
+            ScanTargetRepository,
 
-    private analyzer =
-        new ScanAnalyzer();
+    ) {}
 
-    async scan(data: ScanRequest) {
+    async createJob(
+        input: CreateScanJobRequest
+    ) {
 
-        const xml =
-            await this.worker.run(data.ip);
+        if (
+            !input.targets ||
+            input.targets.length === 0
+        ) {
 
-        const result =
-            this.parser.parse(xml);
+            throw new Error(
+                "No scan targets supplied"
+            );
+        }
 
-        console.log(
-            "[ScanService] parsed ports:",
-            result.ports.map(port => ({
-                port: port.port,
-                state: port.state,
-                service: port.service,
-                product: port.product,
-                version: port.version,
-                nmapConfidence: port.nmapConfidence
-            }))
-        );
-
-        const inspections: InspectionResult[] = [];
-
-        for (const port of result.ports) {
-
-            console.log(
-                `[ScanService] checking inspectors for ${port.port}/${port.service}`,
-                {
-                    state: port.state,
-                    service: port.service
-                }
+        const hosts =
+            expandTargets(
+                input.targets
             );
 
-            const matchingInspectors =
-                this.inspectors.all.filter(
-                    inspector =>
-                        inspector.supports(port)
-                );
+        if (hosts.length === 0) {
 
-            console.log(
-                `[ScanService] matched inspectors for ${port.port}:`,
-                matchingInspectors.map(
-                    inspector =>
-                        inspector.constructor.name
-                )
+            throw new Error(
+                "No scan targets supplied"
             );
-
-            for (
-                const inspector
-                of matchingInspectors
-            ) {
-
-                try {
-
-                    console.log(
-                        `[ScanService] running ${inspector.constructor.name} on ${result.host}:${port.port}`
-                    );
-
-                    const inspection =
-                        await inspector.inspect(
-                            result.host,
-                            port
-                        );
-
-                    console.log(
-                        `[ScanService] inspection result ${result.host}:${port.port}:`,
-                        inspection
-                    );
-
-                    inspections.push(
-                        inspection
-                    );
-
-                } catch (error) {
-
-                    console.error(
-                        `[Inspector] ${inspector.constructor.name} failed on ${result.host}:${port.port}`,
-                        error
-                    );
-
-                }
-
-            }
-
         }
 
         console.log(
-            "[ScanService] all inspections:",
-            inspections
+            `[ScannerService] creating scan job for ${hosts.length} targets`
         );
 
-        const analysis =
-            this.analyzer.analyze(
-                result,
-                inspections
+        const job =
+            await this.jobRepository.create({
+
+                status:
+                    "queued",
+
+                totalTargets:
+                    hosts.length,
+
+                completedTargets:
+                    0,
+
+                failedTargets:
+                    0,
+            });
+
+        const targets =
+            await this.targetRepository.createMany(
+
+                hosts.map(
+                    host => ({
+
+                        jobId:
+                            job.id,
+
+                        host,
+
+                        status:
+                            "queued",
+                    })
+                )
             );
 
-        return {
+        await scanQueue.addBulk(
 
-            id: crypto.randomUUID(),
+            targets.map(
+                (target: ScanTarget) => ({
 
-            result,
+                    name:
+                        "scan-target",
 
-            inspections,
+                    data: {
 
-            analysis
+                        targetId:
+                            target.id,
 
-        };
+                        jobId:
+                            target.jobId,
+                    },
+                })
+            )
+        );
 
+        await this.jobRepository.update(
+            job.id,
+            {
+                status:
+                    "running",
+
+                startedAt:
+                    new Date(),
+            }
+        );
+
+        return job;
     }
-
-}
-
-export interface PortAnalysisInput {
-    port: ScanPort;
-    evidence: FingerprintEvidence;
-    inspections: InspectionResult[];
 }

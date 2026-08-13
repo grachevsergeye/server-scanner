@@ -3,6 +3,10 @@ import type {
 } from "../types/scan.types.js";
 
 import type {
+    InspectionResult,
+} from "../inspectors/inspector.interface.js";
+
+import type {
     ScanJobRepository,
 } from "../database/repositories/scan-job.repository.js";
 
@@ -10,34 +14,19 @@ import type {
     ScanTargetRepository,
 } from "../database/repositories/scan-target.repository.js";
 
-import { NmapService } from "../scanner/nmap.service.js";
+import { NmapService }
+    from "./nmap.service.js";
 
-import { NmapParser } from "../parsers/nmap.parser.js";
+import { NmapParser }
+    from "../parsers/nmap.parser.js";
 
-import { InspectorRegistry } from "../inspectors/inspector.registry.js";
+import { InspectorRegistry }
+    from "../inspectors/inspector.registry.js";
 
-import { ScanAnalyzer } from "../analysis/scan.analyzer.js";
-
-export interface ScanWorkerJob {
-
-    targetId: string;
-
-    jobId: string;
-}
+import { ScanAnalyzer }
+    from "../analysis/scan.analyzer.js";
 
 export class ScanWorker {
-
-    private readonly nmap =
-        new NmapService();
-
-    private readonly parser =
-        new NmapParser();
-
-    private readonly inspectors =
-        new InspectorRegistry();
-
-    private readonly analyzer =
-        new ScanAnalyzer();
 
     constructor(
 
@@ -47,24 +36,22 @@ export class ScanWorker {
         private readonly jobRepository:
             ScanJobRepository,
 
+        private readonly nmap =
+            new NmapService(),
+
+        private readonly parser =
+            new NmapParser(),
+
+        private readonly inspectors =
+            new InspectorRegistry(),
+
+        private readonly analyzer =
+            new ScanAnalyzer(),
     ) {}
 
     async process(
-        data: ScanWorkerJob
+        target: ScanTarget
     ): Promise<void> {
-
-        const target =
-            await this.targetRepository.findById(
-                data.targetId
-            );
-
-        if (!target) {
-
-            throw new Error(
-                `Scan target ${data.targetId} not found`
-            );
-
-        }
 
         try {
 
@@ -77,7 +64,15 @@ export class ScanWorker {
                     target.host
                 );
 
-            const scanResult =
+            if (nmap.exitCode !== 0) {
+
+                throw new Error(
+                    nmap.stderr ||
+                    `Nmap exited with code ${nmap.exitCode}`
+                );
+            }
+
+            const result =
                 this.parser.parse(
                     nmap.stdout
                 );
@@ -86,14 +81,15 @@ export class ScanWorker {
                 target.id
             );
 
-            const inspections = [];
+            const inspections:
+                InspectionResult[] = [];
 
             for (
                 const port
-                of scanResult.ports
+                of result.ports
             ) {
 
-                const matchingInspectors =
+                const matching =
                     this.inspectors.all.filter(
                         inspector =>
                             inspector.supports(port)
@@ -101,14 +97,14 @@ export class ScanWorker {
 
                 for (
                     const inspector
-                    of matchingInspectors
+                    of matching
                 ) {
 
                     try {
 
                         const inspection =
                             await inspector.inspect(
-                                scanResult.host,
+                                result.host,
                                 port
                             );
 
@@ -119,21 +115,11 @@ export class ScanWorker {
                     } catch (error) {
 
                         console.error(
-                            `[Inspector] ${
-                                inspector.constructor.name
-                            } failed on ${
-                                scanResult.host
-                            }:${
-                                port.port
-                            }`,
-
+                            `[Inspector] ${inspector.constructor.name} failed on ${result.host}:${port.port}`,
                             error
                         );
-
                     }
-
                 }
-
             }
 
             await this.targetRepository.markFingerprinting(
@@ -142,7 +128,7 @@ export class ScanWorker {
 
             const analysis =
                 this.analyzer.analyze(
-                    scanResult,
+                    result,
                     inspections
                 );
 
@@ -150,20 +136,18 @@ export class ScanWorker {
                 target.id
             );
 
-            await this.saveResult(
-                target,
-                scanResult,
-                analysis
-            );
-
             await this.targetRepository.markCompleted(
                 target.id,
-                scanResult
+                result
             );
 
             await this.jobRepository.incrementProgress(
                 target.jobId,
                 true
+            );
+
+            console.log(
+                `[ScanWorker] completed ${target.host}`
             );
 
         } catch (error) {
@@ -172,6 +156,10 @@ export class ScanWorker {
                 error instanceof Error
                     ? error.message
                     : String(error);
+
+            console.error(
+                `[ScanWorker] failed ${target.host}: ${message}`
+            );
 
             await this.targetRepository.markFailed(
                 target.id,
@@ -185,23 +173,5 @@ export class ScanWorker {
 
             throw error;
         }
-    }
-
-    private async saveResult(
-        target: ScanTarget,
-        result: ReturnType<NmapParser["parse"]>,
-        analysis: ReturnType<ScanAnalyzer["analyze"]>,
-    ) {
-
-        console.log(
-            "[ScanWorker] completed",
-            {
-                targetId: target.id,
-                host: target.host,
-                ports: result.ports.length,
-                analysis,
-            }
-        );
-
     }
 }

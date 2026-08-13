@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { ScanService } from "../services/scan.service.js";
+import { ScannerService } from "../services/scan.service.js";
 
-const scanService = new ScanService();
+const scanService = new ScannerService();
 
 interface ScanBody {
     ip: string;

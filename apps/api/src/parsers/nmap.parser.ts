@@ -13,13 +13,21 @@ export class NmapParser {
             attributeNamePrefix: "",
         });
 
-    parse(xml: string): ScanResult {
+    parse(
+        xml: string
+    ): ScanResult {
 
         const data =
             this.parser.parse(xml);
 
         const host =
-            data.nmaprun.host;
+            data.nmaprun?.host;
+
+        if (!host) {
+            throw new Error(
+                "Nmap returned no host information"
+            );
+        }
 
         const rawPorts =
             host.ports?.port ?? [];
@@ -34,55 +42,64 @@ export class NmapParser {
                 (port: any) => ({
 
                     port:
-                        Number(port.portid),
+                        Number(
+                            port.portid
+                        ),
 
                     protocol:
-                        port.protocol,
+                        port.protocol ?? "tcp",
 
                     state:
-                        port.state?.state ?? "unknown",
+                        port.state?.state ??
+                        "unknown",
 
                     service:
-                        port.service?.name ?? "",
+                        port.service?.name ??
+                        "",
 
                     product:
-                        port.service?.product ?? "",
+                        port.service?.product ??
+                        "",
 
                     version:
-                        port.service?.version ?? "",
+                        port.service?.version ??
+                        "",
 
                     extraInfo:
-                        port.service?.extrainfo ?? "",
+                        port.service?.extrainfo ??
+                        "",
 
                     tunnel:
-                        port.service?.tunnel ?? "",
-
-                    confidence:
-                        Number(
-                            port.service?.conf ?? 0
-                        ),
+                        port.service?.tunnel ??
+                        "",
 
                     nmapConfidence:
                         Number(
-                            port.service?.conf ?? 0
-                        )
-
+                            port.service?.conf ??
+                            0
+                        ),
                 })
             );
+
+        const rawHostname =
+            host.hostnames?.hostname;
+
+        const hostname =
+            Array.isArray(rawHostname)
+                ? rawHostname[0]?.name
+                : rawHostname?.name;
 
         return {
 
             host:
-                host.address.addr,
+                host.address?.addr ?? "",
 
-            hostname:
-                host.hostnames?.hostname?.name ?? "",
+            ...(hostname
+                ? { hostname }
+                : {}),
 
             ports:
-                parsedPorts
-
+                parsedPorts,
         };
-
     }
-
 }
