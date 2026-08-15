@@ -2,6 +2,8 @@ import {
     createScanQueueWorker,
 } from "./scan.queue.js";
 
+import { testPostgresConnection } from "../database/postgres.js";
+
 import {
     scanJobRepository,
     scanTargetRepository,

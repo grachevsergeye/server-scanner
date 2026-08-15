@@ -1,13 +1,13 @@
 import {
-    InMemoryScanJobRepository,
-} from "../database/repositories/in-memory-scan-job.repository.js";
+    PostgresScanJobRepository,
+} from "../database/repositories/postgres-scan-job.repository.js";
 
 import {
-    InMemoryScanTargetRepository,
-} from "../database/repositories/in-memory-scan-target.repository.js";
+    PostgresScanTargetRepository,
+} from "../database/repositories/postgres-scan-target.repository.js";
 
 export const scanJobRepository =
-    new InMemoryScanJobRepository();
+    new PostgresScanJobRepository();
 
 export const scanTargetRepository =
-    new InMemoryScanTargetRepository();
+    new PostgresScanTargetRepository();
