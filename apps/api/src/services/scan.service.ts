@@ -112,17 +112,14 @@ export class ScannerService {
             )
         );
 
-        await this.jobRepository.update(
+        const runningJob = await this.jobRepository.update(
             job.id,
             {
-                status:
-                    "running",
-
-                startedAt:
-                    new Date(),
+                status: "running",
+                startedAt: new Date(),
             }
         );
 
-        return job;
+        return runningJob;
     }
 }

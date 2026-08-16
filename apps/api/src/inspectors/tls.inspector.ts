@@ -27,80 +27,117 @@ export class TlsInspector {
         return new Promise((resolve, reject) => {
 
             const socket = tls.connect({
-
                 host,
-
                 port: port.port,
-
                 servername: host,
-
-                rejectUnauthorized: false
-
+                rejectUnauthorized: false,
+                timeout: 3000,
             });
+
+            let finished = false;
+
+            const cleanup = () => {
+                socket.removeAllListeners();
+                socket.destroy();
+            };
 
             socket.once("secureConnect", () => {
 
-                const protocol =
-                    socket.getProtocol() ??
-                    "unknown";
+                if (finished) {
+                    return;
+                }
 
-                const certificate =
-                    this.parser.parse(
-                        socket.getPeerCertificate()
-                    );
+                finished = true;
 
-                const cipher =
-                    socket.getCipher();
+                try {
 
-                resolve({
+                    const protocol =
+                        socket.getProtocol() ??
+                        "unknown";
 
-                    port: port.port,
+                    const certificate =
+                        this.parser.parse(
+                            socket.getPeerCertificate()
+                        );
 
-                    service: port.service,
+                    const cipher =
+                        socket.getCipher();
 
-                    type: "tls",
+                    resolve({
+                        port: port.port,
+                        service: port.service,
+                        type: "tls",
+                        title: "TLS",
+                        data: {
+                            protocol,
+                            cipher: {
+                                name: cipher.name,
 
-                    title: "TLS",
+                                ...(cipher.standardName
+                                    ? {
+                                        standardName:
+                                            cipher.standardName
+                                    }
+                                    : {}),
 
-                    data: {
+                                ...(cipher.version
+                                    ? {
+                                        version:
+                                            cipher.version
+                                    }
+                                    : {})
+                            },
+                            certificate
+                        }
+                    });
 
-                        protocol,
+                } catch (error) {
 
-                        cipher: {
+                    reject(error);
 
-                            name: cipher.name,
+                } finally {
 
-                            ...(cipher.standardName
-                                ? {
-                                    standardName:
-                                        cipher.standardName
-                                }
-                                : {}),
+                    cleanup();
 
-                            ...(cipher.version
-                                ? {
-                                    version:
-                                        cipher.version
-                                }
-                                : {})
-                        },
-
-                        certificate
-
-                    }
-
-                });
-
-                socket.end();
-
+                }
             });
 
-            socket.once(
-                "error",
-                reject
-            );
+            socket.once("timeout", () => {
+
+                if (finished) {
+                    return;
+                }
+
+                finished = true;
+
+                const error =
+                    Object.assign(
+                        new Error(
+                            "TLS connection timed out"
+                        ),
+                        {
+                            code: "ETIMEDOUT"
+                        }
+                    );
+
+                cleanup();
+
+                reject(error);
+            });
+
+            socket.once("error", error => {
+
+                if (finished) {
+                    return;
+                }
+
+                finished = true;
+
+                cleanup();
+
+                reject(error);
+            });
 
         });
-
     }
 }
