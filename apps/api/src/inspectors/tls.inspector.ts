@@ -5,6 +5,8 @@ import type { InspectionResult } from "./inspector.interface.js";
 
 import { CertificateParser } from "../parsers/certificate.parser.js";
 
+import { scannerTimeouts } from "../config/scanner.config.js";
+
 export class TlsInspector {
 
     supports(port: ScanPort): boolean {
@@ -31,7 +33,8 @@ export class TlsInspector {
                 port: port.port,
                 servername: host,
                 rejectUnauthorized: false,
-                timeout: 3000,
+                timeout:
+                    scannerTimeouts.tls,
             });
 
             let finished = false;

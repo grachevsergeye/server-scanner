@@ -9,6 +9,8 @@ import type {
 import type { ScanPort } from "../types/scan.types.js";
 import { TechnologyDetector } from "./technology.detector.js";
 
+import { scannerTimeouts } from "../config/scanner.config.js";
+
 export class HttpInspector implements Inspector {
 
     supports(port: ScanPort): boolean {
@@ -65,7 +67,8 @@ export class HttpInspector implements Inspector {
             await axios.get(
                 url,
                 {
-                    timeout: 5000,
+                    timeout:
+                        scannerTimeouts.http,
                     validateStatus: () => true
                 }
             );

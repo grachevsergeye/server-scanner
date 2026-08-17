@@ -1,23 +1,53 @@
 export interface ScanPort {
     port: number;
-    protocol: string;
 
-    state: string;
+    protocol: "tcp" | "udp";
+
+    state:
+        | "open"
+        | "closed"
+        | "filtered"
+        | "open|filtered"
+        | "closed|filtered"
+        | "unknown";
 
     service: string;
-    product: string;
-    version: string;
 
-    extraInfo: string;
-    tunnel: string;
+    product?: string;
+    version?: string;
+    extraInfo?: string;
 
-    nmapConfidence: number;
+    tunnel?: string;
+
+    method?: string;
+
+    nmapConfidence?: number;
+
+    serviceFingerprint?: string;
 }
 
 export interface ScanResult {
+
     host: string;
+
     hostname?: string;
+
+    state?: "up" | "down" | "unknown";
+
+    addresses?: {
+        ipv4?: string;
+        ipv6?: string;
+        mac?: string;
+    };
+
     ports: ScanPort[];
+
+    scan?: {
+        startedAt?: string;
+        durationMs?: number;
+        nmapVersion?: string;
+        arguments?: string;
+    };
 }
 
 export type ScanJobStatus =

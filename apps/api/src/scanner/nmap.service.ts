@@ -1,40 +1,186 @@
 import { spawn } from "node:child_process";
 import { XMLParser } from "fast-xml-parser";
 
-import { env }
-    from "../config/env.js";
+import { env } from "../config/env.js";
+
+import {
+    scannerTimeouts,
+} from "../config/scanner.config.js";
+
+export interface NmapCommandResult {
+    stdout: string;
+    stderr: string;
+    exitCode: number;
+    durationMs: number;
+    timedOut: boolean;
+}
 
 export interface NmapScanResult {
     host: string;
-
     stdout: string;
-
     stderr: string;
-
     exitCode: number;
+    durationMs: number;
+    timedOut: boolean;
 }
 
 export interface NmapHostDiscoveryResult {
-
     hosts: string[];
-
     stdout: string;
-
     stderr: string;
-
     exitCode: number;
+    durationMs: number;
+    timedOut: boolean;
+}
+
+export class NmapTimeoutError extends Error {
+
+    readonly code = "NMAP_TIMEOUT";
+
+    constructor(
+        public readonly timeoutMs: number,
+    ) {
+        super(
+            `Nmap scan timed out after ${timeoutMs}ms`
+        );
+
+        this.name = "NmapTimeoutError";
+    }
 }
 
 export class NmapService {
 
-    private parser =
+    private readonly parser =
         new XMLParser({
             ignoreAttributes: false,
             attributeNamePrefix: "",
         });
 
+    private asArray<T>(
+        value: T | T[] | undefined
+    ): T[] {
+
+        if (value === undefined) {
+            return [];
+        }
+
+        return Array.isArray(value)
+            ? value
+            : [value];
+    }
+
+    private runNmap(
+        args: string[],
+        timeoutMs: number,
+    ): Promise<NmapCommandResult> {
+
+        return new Promise((resolve, reject) => {
+
+            const start = performance.now();
+
+            let stdout = "";
+            let stderr = "";
+
+            let settled = false;
+            let timedOut = false;
+
+            const child = spawn(
+                env.NMAP_PATH,
+                args,
+                {
+                    windowsHide: true,
+                    stdio: [
+                        "ignore",
+                        "pipe",
+                        "pipe",
+                    ],
+                }
+            );
+
+            const finish = (
+                exitCode: number
+            ) => {
+
+                if (settled) {
+                    return;
+                }
+
+                settled = true;
+
+                clearTimeout(timer);
+
+                const durationMs = Math.round(
+                    performance.now() - start
+                );
+
+                resolve({
+                    stdout,
+                    stderr,
+                    exitCode,
+                    durationMs,
+                    timedOut,
+                });
+            };
+
+            const timer = setTimeout(() => {
+
+                if (settled) {
+                    return;
+                }
+
+                timedOut = true;
+
+                stderr +=
+                    `Nmap hard timeout after ${timeoutMs}ms`;
+
+                child.kill();
+
+            }, timeoutMs);
+
+            child.stdout.on(
+                "data",
+                data => {
+                    stdout += data.toString();
+                }
+            );
+
+            child.stderr.on(
+                "data",
+                data => {
+                    stderr += data.toString();
+                }
+            );
+
+            child.once(
+                "error",
+                error => {
+
+                    if (settled) {
+                        return;
+                    }
+
+                    settled = true;
+
+                    clearTimeout(timer);
+
+                    reject(error);
+                }
+            );
+
+            child.once(
+                "close",
+                exitCode => {
+
+                    finish(
+                        exitCode ?? -1
+                    );
+                }
+            );
+        });
+    }
+
     private parseDiscoveredHosts(
-        xml: string
+        xml: string,
     ): string[] {
 
         const data =
@@ -58,159 +204,113 @@ export class NmapService {
                     host.address?.addr
             )
             .filter(
-                (host: unknown): host is string =>
+                (
+                    host: unknown
+                ): host is string =>
                     typeof host === "string"
             );
     }
 
     async discoverHosts(
-        target: string
+        target: string,
     ): Promise<NmapHostDiscoveryResult> {
 
-        return new Promise(
-            (resolve, reject) => {
+        const result =
+            await this.runNmap(
+                [
+                    "-sn",
+                    "-oX",
+                    "-",
+                    target,
+                ],
+                scannerTimeouts.nmap,
+            );
 
-                const child =
-                    spawn(
-                        env.NMAP_PATH,
-                        [
-                            "-sn",
-                            "-oX",
-                            "-",
-                            target,
-                        ],
-                        {
-                            windowsHide: true,
-                        }
-                    );
+        if (result.timedOut) {
+            throw new NmapTimeoutError(
+                scannerTimeouts.nmap
+            );
+        }
 
-                let stdout = "";
-                let stderr = "";
+        return {
+            hosts:
+                result.exitCode === 0
+                    ? this.parseDiscoveredHosts(
+                        result.stdout
+                    )
+                    : [],
 
-                child.stdout.on(
-                    "data",
-                    data => {
-                        stdout += data.toString();
-                    }
-                );
+            stdout:
+                result.stdout,
 
-                child.stderr.on(
-                    "data",
-                    data => {
-                        stderr += data.toString();
-                    }
-                );
+            stderr:
+                result.stderr,
 
-                child.on(
-                    "error",
-                    reject
-                );
+            exitCode:
+                result.exitCode,
 
-                child.on(
-                    "close",
-                    exitCode => {
+            durationMs:
+                result.durationMs,
 
-                        if (exitCode !== 0) {
-                            resolve({
-                                hosts: [],
-                                stdout,
-                                stderr,
-                                exitCode:
-                                    exitCode ?? -1,
-                            });
-
-                            return;
-                        }
-
-                        resolve({
-                            hosts:
-                                this.parseDiscoveredHosts(
-                                    stdout
-                                ),
-
-                            stdout,
-                            stderr,
-
-                            exitCode:
-                                exitCode ?? -1,
-                        });
-                    }
-                );
-            }
-        );
+            timedOut:
+                result.timedOut,
+        };
     }
 
     async scan(
-        host: string
+        host: string,
     ): Promise<NmapScanResult> {
 
-        return new Promise(
-            (resolve, reject) => {
+        const result =
+            await this.runNmap(
+                [
+                    "-Pn",
 
-                const child =
-                    spawn(
-                        env.NMAP_PATH,
-                        [
-                            "-Pn",
+                    "-sV",
 
-                            "-sV",
+                    "--version-intensity",
+                    "5",
 
-                            "-p",
-                            "22,23,80,443,135,139,445,3306,5432,6379,11211",
+                    "--host-timeout",
+                    "15s",
 
-                            "-oX",
-                            "-",
+                    "--max-retries",
+                    "3",
 
-                            host,
-                        ],
-                        {
-                            windowsHide: true,
-                        }
-                    );
+                    "-p",
+                    "22,23,80,443,135,139,445,3306,5432,6379,11211",
 
-                let stdout = "";
-                let stderr = "";
+                    "-oX",
+                    "-",
 
-                child.stdout.on(
-                    "data",
-                    data => {
-                        stdout +=
-                            data.toString();
-                    }
-                );
+                    host,
+                ],
+                scannerTimeouts.nmap,
+            );
 
-                child.stderr.on(
-                    "data",
-                    data => {
-                        stderr +=
-                            data.toString();
-                    }
-                );
+        if (result.timedOut) {
+            throw new NmapTimeoutError(
+                scannerTimeouts.nmap
+            );
+        }
 
-                child.on(
-                    "error",
-                    error => {
-                        reject(error);
-                    }
-                );
+        return {
+            host,
 
-                child.on(
-                    "close",
-                    exitCode => {
+            stdout:
+                result.stdout,
 
-                        resolve({
-                            host,
+            stderr:
+                result.stderr,
 
-                            stdout,
+            exitCode:
+                result.exitCode,
 
-                            stderr,
+            durationMs:
+                result.durationMs,
 
-                            exitCode:
-                                exitCode ?? -1,
-                        });
-                    }
-                );
-            }
-        );
+            timedOut:
+                result.timedOut,
+        };
     }
 }

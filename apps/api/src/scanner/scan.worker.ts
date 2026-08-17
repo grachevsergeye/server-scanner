@@ -37,6 +37,10 @@ import { InspectorRegistry }
 import { ScanAnalyzer }
     from "../analysis/scan.analyzer.js";
 
+import { withTimeout } from "../config/with-timeout.js";
+
+import { scannerTimeouts } from "../config/scanner.config.js";
+
 export class ScanWorker {
 
     constructor(
@@ -120,14 +124,13 @@ export class ScanWorker {
                 return;
             }
 
-            
-            const nmapStart = performance.now();
-            
-            const nmapMs = Math.round(
-                performance.now() - nmapStart
-            );
+            const nmap =
+                await this.nmap.scan(
+                    target.host
+                );
 
-            const nmap = await this.nmap.scan(target.host);
+            const nmapMs =
+                nmap.durationMs;
 
             if (nmap.exitCode !== 0) {
 
@@ -189,10 +192,14 @@ export class ScanWorker {
                     try {
                         
                         const inspection =
-                        await inspector.inspect(
-                            result.host,
-                            port
-                        );
+                            await withTimeout(
+                                inspector.inspect(
+                                    result.host,
+                                    port
+                                ),
+                                scannerTimeouts.inspector,
+                                `${inspector.constructor.name} timed out`,
+                            );
 
                         inspections.push(
                             inspection
@@ -211,9 +218,9 @@ export class ScanWorker {
                         console.warn(
                             `[Inspector] ${inspector.constructor.name} ` +
                             `${result.host}:${port.port} ` +
-                            `${failure.category}: ${failure.message}`
+                            `${failure.category}: ${failure.message}`,
+                            error
                         );
-
                     }
 
                 }

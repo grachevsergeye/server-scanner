@@ -9,12 +9,35 @@ import type {
     ScanPort
 } from "../types/scan.types.js";
 
+import { scannerTimeouts } from "../config/scanner.config.js";
+
 export class SshInspector implements Inspector {
 
     supports(port: ScanPort): boolean {
 
         return port.service === "ssh";
 
+    }
+
+    private parseBanner(
+        banner: string
+    ) {
+        const match =
+            banner.match(
+                /^SSH-(\d+\.\d+)-(.+)$/
+            );
+
+        if (!match) {
+            return {
+                raw: banner,
+            };
+        }
+
+        return {
+            protocol: match[1],
+            software: match[2],
+            raw: banner,
+        };
     }
 
     inspect(
@@ -69,9 +92,7 @@ export class SshInspector implements Inspector {
 
             client.on("error", error => {
 
-                if (
-                    resolved
-                ) {
+                if (resolved) {
                     return;
                 }
 
@@ -88,26 +109,49 @@ export class SshInspector implements Inspector {
                         )
                 ) {
 
+                    resolved = true;
+
                     client.end();
 
                     resolve({
                         port: port.port,
-
                         service: port.service,
-
                         type: "ssh",
-
                         title: "SSH",
-
-                        data: {}
+                        data: {
+                            authentication: "required",
+                        },
                     });
 
                     return;
                 }
 
                 reject(error);
-
             });
+
+            const timer = setTimeout(() => {
+
+                if (resolved) {
+                    return;
+                }
+
+                resolved = true;
+
+                client.end();
+
+                const error =
+                    Object.assign(
+                        new Error(
+                            `SSH inspection timed out after ${scannerTimeouts.ssh}ms`
+                        ),
+                        {
+                            code: "ETIMEDOUT",
+                        }
+                    );
+
+                reject(error);
+
+            }, scannerTimeouts.ssh);
 
             client.connect({
 
@@ -115,9 +159,10 @@ export class SshInspector implements Inspector {
 
                 port: port.port,
 
-                username: "anonymous",
+                username: "scanner",
 
-                readyTimeout: 5000
+                readyTimeout:
+                    scannerTimeouts.ssh,
 
             });
 
