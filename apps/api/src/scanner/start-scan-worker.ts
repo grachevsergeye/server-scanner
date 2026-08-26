@@ -2,8 +2,6 @@ import {
     createScanQueueWorker,
 } from "./scan.queue.js";
 
-import { testPostgresConnection } from "../database/postgres.js";
-
 import {
     scanJobRepository,
     scanTargetRepository,
@@ -20,7 +18,23 @@ worker.on(
     job => {
 
         console.log(
-            `[ScanWorker] completed ${job.id}`
+            "========================================"
+        );
+
+        console.log(
+            "[SCAN WORKER STARTED - NEW CODE]"
+        );
+
+        console.log(
+            new Date().toISOString()
+        );
+
+        console.log(
+            "========================================"
+        );
+
+        console.log(
+            `[BullMQ] queue job completed: ${job.id}`
         );
 
     }

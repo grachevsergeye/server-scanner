@@ -27,6 +27,10 @@ import {
     MemcachedInspector
 } from "./memcached.inspector.js";
 
+import {
+    TelnetInspector
+} from "./telnet.inspector.js"
+
 export class InspectorRegistry {
 
     all = [
@@ -55,7 +59,9 @@ export class InspectorRegistry {
 
         new MongoDbInspector(),
 
-        new MemcachedInspector()
+        new MemcachedInspector(),
+
+        new TelnetInspector(),
 
     ];
 

@@ -15,7 +15,7 @@ import { runConcurrent }
 
 import type {
     InspectionResult,
-} from "../inspectors/inspector.interface.js";
+} from "../inspectors/inspector-result.types.js";
 
 import type {
     ScanJobRepository,
@@ -77,57 +77,23 @@ export class ScanWorker {
             const totalStart =
                 performance.now();
 
-            const discoveryStart =
-                performance.now();
+            const nmap = await this.nmap.scan(target.host);
 
-            const discovery =
-                await this.nmap.discoverHosts(
-                    target.host
-                );
+            console.log(
+                "[DEBUG NMAP]",
+                {
+                    host: target.host,
+                    exitCode: nmap.exitCode,
+                    durationMs: nmap.durationMs,
+                    timedOut: nmap.timedOut,
+                    stdoutLength: nmap.stdout.length,
+                    stderr: nmap.stderr,
+                }
+            );
 
-            const discoveryMs =
-                Math.round(
-                    performance.now() -
-                    discoveryStart
-                );
-
-            if (discovery.exitCode !== 0) {
-
-                throw new Error(
-                    discovery.stderr ||
-                    `Nmap host discovery failed with code ${discovery.exitCode}`
-                );
-            }
-
-            if (!discovery.hosts.includes(target.host)) {
-
-                await this.targetRepository.markCompleted(
-                    target.id,
-                    {
-                        host: target.host,
-                        ports: []
-                    }
-                );
-
-                await this.jobRepository.incrementProgress(
-                    target.jobId,
-                    true
-                );
-
-                console.log(
-                    `[ScanWorker] host down ${target.host}`,
-                    {
-                        discoveryMs
-                    }
-                );
-
-                return;
-            }
-
-            const nmap =
-                await this.nmap.scan(
-                    target.host
-                );
+            console.log(
+                nmap.stdout
+            );
 
             const nmapMs =
                 nmap.durationMs;
@@ -146,6 +112,16 @@ export class ScanWorker {
                 this.parser.parse(
                     nmap.stdout
                 );
+
+            console.log(
+                "[DEBUG PARSED RESULT]",
+                {
+                    host: result.host,
+                    state: result.state,
+                    ports: result.ports.length,
+                    portsData: result.ports,
+                }
+            );
 
             const parseMs =
                 Math.round(
@@ -237,15 +213,25 @@ export class ScanWorker {
             const analysisStart =
                 performance.now();
 
-            this.analyzer.analyze(
-                result,
-                inspections
-            );
+            const analysis =
+                this.analyzer.analyze(
+                    result,
+                    inspections
+                );
 
             const analysisMs =
                 Math.round(
                     performance.now() - analysisStart
                 );
+
+            console.log(
+                "[DEBUG ANALYSIS]",
+                {
+                    host: analysis.host,
+                    findings: analysis.findings.length,
+                    findingsData: analysis.findings,
+                }
+            );
 
             const totalMs = Math.round(
                 performance.now() - totalStart
@@ -269,7 +255,6 @@ export class ScanWorker {
                 `[ScanWorker] completed ${target.host}`,
                 {
                     totalMs,
-                    discoveryMs,
                     nmapMs,
                     parseMs,
                     inspectorMs,

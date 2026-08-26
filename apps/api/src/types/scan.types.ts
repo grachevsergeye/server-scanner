@@ -19,20 +19,33 @@ export interface ScanPort {
 
     tunnel?: string;
 
-    method?: string;
+    serviceMethod?: string;
+
+    cpe?: string[];
 
     nmapConfidence?: number;
 
     serviceFingerprint?: string;
 }
 
+export type ScanCompletionStatus =
+    | "completed"
+    | "partial"
+    | "timeout"
+    | "failed";
+
 export interface ScanResult {
 
     host: string;
 
+    state:
+        | "up"
+        | "down"
+        | "unknown";
+
     hostname?: string;
 
-    state?: "up" | "down" | "unknown";
+    scanStatus: ScanCompletionStatus;
 
     addresses?: {
         ipv4?: string;
@@ -42,11 +55,23 @@ export interface ScanResult {
 
     ports: ScanPort[];
 
+    filteredPorts?: {
+        count: number;
+        reason?: string;
+        ports?: string;
+    };
+
     scan?: {
         startedAt?: string;
+        completedAt?: string;
         durationMs?: number;
         nmapVersion?: string;
         arguments?: string;
+    };
+
+    error?: {
+        code: string;
+        message: string;
     };
 }
 
@@ -104,4 +129,9 @@ export interface ScanTarget {
     startedAt?: Date;
 
     completedAt?: Date;
+}
+
+export interface DiscoveredHost {
+    ip: string;
+    hostnames: string[];
 }

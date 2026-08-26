@@ -1,5 +1,5 @@
 import type { ScanPort } from "../types/scan.types.js";
-import type { InspectionResult } from "../inspectors/inspector.interface.js";
+import type { InspectionResult } from "../inspectors/inspector-result.types.js";
 import type { FingerprintEvidence } from "./evidence.types.js";
 
 export class EvidenceBuilder {

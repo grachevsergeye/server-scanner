@@ -19,4 +19,7 @@ export const scannerTimeouts = {
 
     ssh:
         env.SCANNER_SSH_TIMEOUT_MS,
+
+    telnet:
+        env.SCANNER_TELNET_TIMEOUT_MS,
 } as const;

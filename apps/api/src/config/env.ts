@@ -42,6 +42,9 @@ const envSchema = z.object({
 
     SCANNER_SSH_TIMEOUT_MS:
         z.coerce.number().int().positive().default(5_000),
+
+    SCANNER_TELNET_TIMEOUT_MS:
+        z.coerce.number().int().positive().default(5_000),
 });
 
 export const env = envSchema.parse(process.env);

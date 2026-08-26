@@ -1,9 +1,12 @@
 import { Client } from "ssh2";
 
 import type {
-    Inspector,
-    InspectionResult
+    Inspector
 } from "./inspector.interface.js";
+
+import type {
+    InspectionResult
+} from "./inspector-result.types.js"
 
 import type {
     ScanPort
@@ -68,18 +71,21 @@ export class SshInspector implements Inspector {
 
             client.on("banner", banner => {
 
+                const raw =
+                    banner.toString().trim();
+
+                const parsed =
+                    this.parseBanner(raw);
+
                 finish({
                     port: port.port,
-
                     service: port.service,
-
                     type: "ssh",
-
                     title: "SSH",
-
                     data: {
-                        banner: banner.toString()
-                    }
+                        banner: raw,
+                        ...parsed,
+                    },
                 });
 
             });

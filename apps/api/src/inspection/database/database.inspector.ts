@@ -1,6 +1,6 @@
 import type { Inspector } from "../../inspectors/inspector.interface.js";
 import type { ScanPort } from "../../types/scan.types.js";
-import type { InspectionResult } from "../../inspectors/inspector.interface.js";
+import type { InspectionResult } from "../../inspectors/inspector-result.types.js";
 
 export abstract class DatabaseInspector
     implements Inspector {

@@ -1,10 +1,11 @@
 import type { ScanResult } from "../types/scan.types.js";
+import { SecurityRuleEngine } from "./security/security-rule.engine.js";
 
 import { EvidenceBuilder } from "../fingerprint/evidence.builder.js";
 import { FingerprintEngine } from "../fingerprint/fingerprint.engine.js";
 import { RiskEngine } from "../risk/risk.engine.js";
 
-import type { InspectionResult } from "../inspectors/inspector.interface.js";
+import type { InspectionResult } from "../inspectors/inspector-result.types.js";
 import type { PortInspections } from "../inspection/types.js";
 
 import { SummaryBuilder } from "./summary.builder.js";
@@ -17,6 +18,7 @@ import { HostInfrastructureEngine }
 import { HostRiskEngine } from "../risk/host-risk.engine.js";
 
 import type {
+    AnalysisContext,
     PortAnalysis,
     ScanAnalysis
 } from "./types.js";
@@ -43,6 +45,9 @@ export class ScanAnalyzer {
     
     private hostRisk =
         new HostRiskEngine();
+
+    private security =
+        new SecurityRuleEngine();
 
     private buildPortInspections(
         inspections: InspectionResult[]
@@ -129,6 +134,8 @@ export class ScanAnalyzer {
         inspections: InspectionResult[]
     ): ScanAnalysis {
 
+        console.log("[SCAN ANALYZER] analyze() called");
+
         const ports: PortAnalysis[] =
             result.ports.map(port => {
 
@@ -199,10 +206,22 @@ export class ScanAnalyzer {
                 ports
             );
 
-        return {
+        const context: AnalysisContext = {
+            host: result.host,
+            ports: result.ports,
+            inspections
+        };
 
-            host:
-                result.host,
+        console.log("[SCAN ANALYZER] calling SecurityRuleEngine");
+
+        const findings =
+            this.security.evaluate(context);
+
+        return {
+            host: result.host,
+
+            scanStatus:
+                result.scanStatus,
 
             ...(result.hostname
                 ? {
@@ -219,7 +238,28 @@ export class ScanAnalyzer {
             summary,
 
             risk:
-                hostRisk
+                hostRisk,
+
+            findings,
+
+            meta: {
+                startedAt:
+                    result.scan?.startedAt ??
+                    new Date().toISOString(),
+
+                completedAt:
+                    result.scan?.completedAt ??
+                    new Date().toISOString(),
+
+                durationMs:
+                    result.scan?.durationMs ?? 0,
+
+                portsScanned:
+                    result.ports.length,
+
+                inspectionsCompleted:
+                    inspections.length
+            }
         };
     }
 }

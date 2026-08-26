@@ -1,9 +1,12 @@
 import axios from "axios";
 
 import type {
-    Inspector,
-    InspectionResult
+    Inspector
 } from "./inspector.interface.js";
+
+import type {
+    InspectionResult
+} from "./inspector-result.types.js"
 
 import type { ScanPort } from "../types/scan.types.js";
 

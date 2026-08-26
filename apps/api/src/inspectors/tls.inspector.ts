@@ -1,41 +1,49 @@
 import tls from "node:tls";
 
 import type { ScanPort } from "../types/scan.types.js";
-import type { InspectionResult } from "./inspector.interface.js";
+
+import type { 
+    Inspector
+} from "./inspector.interface.js";
+
+import type {
+    InspectionResult
+} from "./inspector-result.types.js"
 
 import { CertificateParser } from "../parsers/certificate.parser.js";
-
 import { scannerTimeouts } from "../config/scanner.config.js";
 
-export class TlsInspector {
+export class TlsInspector implements Inspector {
 
     supports(port: ScanPort): boolean {
-
         return (
             port.service === "https" ||
             port.tunnel === "ssl"
         );
-
     }
 
-    private parser =
-        new CertificateParser();
+    private parser = new CertificateParser();
 
     async inspect(
         host: string,
-        port: ScanPort
+        port: ScanPort,
     ): Promise<InspectionResult> {
 
         return new Promise((resolve, reject) => {
 
-            const socket = tls.connect({
+            const options: tls.ConnectionOptions = {
                 host,
                 port: port.port,
-                servername: host,
                 rejectUnauthorized: false,
-                timeout:
-                    scannerTimeouts.tls,
-            });
+                timeout: scannerTimeouts.tls,
+            };
+
+            // Only set SNI when host is actually a DNS hostname.
+            if (!this.isIpAddress(host)) {
+                options.servername = host;
+            }
+
+            const socket = tls.connect(options);
 
             let finished = false;
 
@@ -55,8 +63,7 @@ export class TlsInspector {
                 try {
 
                     const protocol =
-                        socket.getProtocol() ??
-                        "unknown";
+                        socket.getProtocol() ?? "unknown";
 
                     const certificate =
                         this.parser.parse(
@@ -79,29 +86,25 @@ export class TlsInspector {
                                 ...(cipher.standardName
                                     ? {
                                         standardName:
-                                            cipher.standardName
+                                            cipher.standardName,
                                     }
                                     : {}),
 
                                 ...(cipher.version
                                     ? {
                                         version:
-                                            cipher.version
+                                            cipher.version,
                                     }
-                                    : {})
+                                    : {}),
                             },
-                            certificate
-                        }
+                            certificate,
+                        },
                     });
 
                 } catch (error) {
-
                     reject(error);
-
                 } finally {
-
                     cleanup();
-
                 }
             });
 
@@ -115,16 +118,11 @@ export class TlsInspector {
 
                 const error =
                     Object.assign(
-                        new Error(
-                            "TLS connection timed out"
-                        ),
-                        {
-                            code: "ETIMEDOUT"
-                        }
+                        new Error("TLS connection timed out"),
+                        { code: "ETIMEDOUT" },
                     );
 
                 cleanup();
-
                 reject(error);
             });
 
@@ -137,10 +135,15 @@ export class TlsInspector {
                 finished = true;
 
                 cleanup();
-
                 reject(error);
             });
-
         });
+    }
+
+    private isIpAddress(host: string): boolean {
+        return (
+            /^[0-9.]+$/.test(host) ||
+            host.includes(":")
+        );
     }
 }

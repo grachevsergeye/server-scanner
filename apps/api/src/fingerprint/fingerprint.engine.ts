@@ -52,29 +52,30 @@ export class FingerprintEngine {
         if (
             matchedRules.length === 0
         ) {
-            return {
+        return {
 
-                port: port.port,
+            port: port.port,
 
-                service: port.service,
+            service: port.service,
 
-                product:
-                    port.product,
+            ...(port.product !== undefined
+                ? { product: port.product }
+                : {}),
 
-                version:
-                    port.version,
+            ...(port.version !== undefined
+                ? { version: port.version }
+                : {}),
 
-                confidence: 0,
+            confidence: 0,
 
-                vendor: "Unknown",
+            vendor: "Unknown",
 
-                category: "Unknown",
+            category: "Unknown",
 
-                technologies:
-                    evidence.technologies ?? [],
+            technologies: evidence.technologies ?? [],
 
-                evidence: []
-            };
+            evidence: []
+        };
         }
 
         const specificRules =
@@ -91,22 +92,26 @@ export class FingerprintEngine {
         const primary =
             usableRules[0]!;
 
+        const product =
+            primary.rule.result.product ??
+            port.product;
+
+        const version =
+            port.version;
+
         return {
-
             port: port.port,
+            service: port.service,
 
-            service:
-                port.service,
+            ...(product !== undefined
+                ? { product }
+                : {}),
 
-            product:
-                primary.rule.result.product ??
-                port.product,
+            ...(version !== undefined
+                ? { version }
+                : {}),
 
-            version:
-                port.version,
-
-            confidence:
-                primary.confidence,
+            confidence: primary.confidence,
 
             vendor:
                 primary.rule.result.vendor,
