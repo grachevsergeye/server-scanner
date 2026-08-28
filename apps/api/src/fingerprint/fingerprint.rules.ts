@@ -455,9 +455,9 @@ export const FingerprintRules: FingerprintRule[] = [
         }
     },
 
-        /*
-        * TELLNET
-        */
+    /*
+    * TELLNET
+    */
 
         {
             id: "linux-telnetd",

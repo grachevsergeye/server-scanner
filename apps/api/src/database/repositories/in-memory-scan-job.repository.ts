@@ -8,6 +8,7 @@ import type {
     CreateScanJobData,
     UpdateScanJobData,
     ScanJobRepository,
+    ScanHistorySummary
 } from "./scan-job.repository.js";
 
 export class InMemoryScanJobRepository
@@ -51,6 +52,35 @@ export class InMemoryScanJobRepository
     ): Promise<ScanJob | null> {
 
         return this.jobs.get(id) ?? null;
+    }
+
+    async findRecent(
+        limit: number
+    ): Promise<ScanHistorySummary[]> {
+        return Array.from(this.jobs.values())
+            .sort(
+                (a, b) =>
+                    b.createdAt.getTime() -
+                    a.createdAt.getTime()
+            )
+            .slice(0, limit)
+            .map((job) => ({
+                id: job.id,
+                status: job.status,
+                totalTargets: job.totalTargets,
+                completedTargets: job.completedTargets,
+                failedTargets: job.failedTargets,
+                createdAt: job.createdAt,
+                ...(job.startedAt
+                    ? { startedAt: job.startedAt }
+                    : {}),
+                ...(job.completedAt
+                    ? { completedAt: job.completedAt }
+                    : {}),
+                targets: [],
+                portCount: 0,
+                findingCount: 0,
+            }));
     }
 
     async update(

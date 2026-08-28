@@ -191,17 +191,6 @@ export class NmapParser {
             ports.map(
                 (port: any) => ({
 
-                    scan: {
-                        startedAt:
-                            nmaprun.startstr,
-
-                        nmapVersion:
-                            nmaprun.version,
-
-                        arguments:
-                            nmaprun.args?.replace(/&#45;/g, "-"),
-                    },
-
                     port:
                         Number(
                             port.portid
@@ -233,6 +222,17 @@ export class NmapParser {
                     tunnel:
                         port.service?.tunnel ??
                         "",
+
+                    serviceMethod:
+                        port.service?.method ??
+                        "",
+
+                    cpe:
+                        port.service?.cpe
+                            ? Array.isArray(port.service.cpe)
+                                ? port.service.cpe
+                                : [port.service.cpe]
+                            : [],
 
                     nmapConfidence:
                         Number(

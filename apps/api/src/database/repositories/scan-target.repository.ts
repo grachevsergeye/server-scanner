@@ -4,6 +4,14 @@ import type {
     ScanTargetStatus,
 } from "../../types/scan.types.js";
 
+import type {
+    InspectionResult,
+} from "../../inspectors/inspector-result.types.js";
+
+import type {
+    ScanAnalysis,
+} from "../../analysis/types.js";
+
 export interface CreateScanTargetData {
     jobId: string;
     host: string;
@@ -11,9 +19,14 @@ export interface CreateScanTargetData {
 }
 
 export interface UpdateScanTargetData {
+
     status?: ScanTargetStatus;
 
     result?: ScanResult;
+
+    inspections?: InspectionResult[];
+
+    analysis?: ScanAnalysis;
 
     error?: string;
 
@@ -22,15 +35,25 @@ export interface UpdateScanTargetData {
     completedAt?: Date;
 }
 
-export interface ScanTargetRepository {
+export interface CompleteScanTargetData {
+    targetId: string;
+    scan: ScanResult;
+    inspections: InspectionResult[];
+    analysis: ScanAnalysis;
+}
 
+export interface ScanTargetRepository {
     createMany(
         targets: CreateScanTargetData[]
     ): Promise<ScanTarget[]>;
 
     findById(
-        id: string
+        targetId: string
     ): Promise<ScanTarget | null>;
+
+    findByJobId(
+        jobId: string
+    ): Promise<ScanTarget[]>;
 
     update(
         id: string,
@@ -54,8 +77,7 @@ export interface ScanTargetRepository {
     ): Promise<ScanTarget>;
 
     markCompleted(
-        id: string,
-        result: ScanResult
+        data: CompleteScanTargetData
     ): Promise<ScanTarget>;
 
     markFailed(

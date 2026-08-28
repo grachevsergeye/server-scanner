@@ -1,7 +1,6 @@
 import crypto from "node:crypto";
 
 import type {
-    ScanResult,
     ScanTarget,
 } from "../../types/scan.types.js";
 
@@ -9,6 +8,7 @@ import type {
     CreateScanTargetData,
     UpdateScanTargetData,
     ScanTargetRepository,
+    CompleteScanTargetData
 } from "./scan-target.repository.js";
 
 export class InMemoryScanTargetRepository
@@ -52,10 +52,17 @@ export class InMemoryScanTargetRepository
     }
 
     async findById(
-        id: string
+        targetId: string
     ): Promise<ScanTarget | null> {
+        return this.targets.get(targetId) ?? null;
+    }
 
-        return this.targets.get(id) ?? null;
+    async findByJobId(
+        jobId: string
+    ): Promise<ScanTarget[]> {
+        return Array.from(this.targets.values()).filter(
+            target => target.jobId === jobId
+        );
     }
 
     async update(
@@ -130,21 +137,21 @@ export class InMemoryScanTargetRepository
     }
 
     async markCompleted(
-        id: string,
-        result: ScanResult
+        data: CompleteScanTargetData
     ): Promise<ScanTarget> {
 
-        return this.update(
-            id,
-            {
-                status: "completed",
+        return this.update(data.targetId, {
 
-                result,
+            status: "completed",
 
-                completedAt:
-                    new Date(),
-            }
-        );
+            result: data.scan,
+
+            inspections: data.inspections,
+
+            analysis: data.analysis,
+
+            completedAt: new Date(),
+        });
     }
 
     async markFailed(

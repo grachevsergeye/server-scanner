@@ -1,5 +1,4 @@
 import type {
-    ScanResult,
     ScanTarget,
     ScanTargetStatus,
 } from "../../types/scan.types.js";
@@ -8,6 +7,7 @@ import type {
     CreateScanTargetData,
     UpdateScanTargetData,
     ScanTargetRepository,
+    CompleteScanTargetData,
 } from "./scan-target.repository.js";
 
 import { postgres } from "../postgres.js";
@@ -49,16 +49,15 @@ export class PostgresScanTargetRepository
     }
 
     async findById(
-        id: string
+        targetId: string
     ): Promise<ScanTarget | null> {
-
         const result = await postgres.query(
             `
             SELECT *
             FROM scan_targets
             WHERE id = $1
             `,
-            [id]
+            [targetId]
         );
 
         if (result.rows.length === 0) {
@@ -66,6 +65,22 @@ export class PostgresScanTargetRepository
         }
 
         return this.mapRow(result.rows[0]);
+    }
+
+    async findByJobId(
+        jobId: string
+    ): Promise<ScanTarget[]> {
+        const result = await postgres.query(
+            `
+            SELECT *
+            FROM scan_targets
+            WHERE job_id = $1
+            ORDER BY created_at ASC
+            `,
+            [jobId]
+        );
+
+        return result.rows.map((row) => this.mapRow(row));
     }
 
     async update(
@@ -80,8 +95,14 @@ export class PostgresScanTargetRepository
             fields.push(
                 `status = $${values.length + 1}`
             );
-
             values.push(data.status);
+        }
+
+        if (data.error !== undefined) {
+            fields.push(
+                `error = $${values.length + 1}`
+            );
+            values.push(data.error);
         }
 
         if (data.result !== undefined) {
@@ -94,12 +115,24 @@ export class PostgresScanTargetRepository
             );
         }
 
-        if (data.error !== undefined) {
+        if (data.inspections !== undefined) {
             fields.push(
-                `error = $${values.length + 1}`
+                `inspections = $${values.length + 1}`
             );
 
-            values.push(data.error);
+            values.push(
+                JSON.stringify(data.inspections)
+            );
+        }
+
+        if (data.analysis !== undefined) {
+            fields.push(
+                `analysis = $${values.length + 1}`
+            );
+
+            values.push(
+                JSON.stringify(data.analysis)
+            );
         }
 
         if (data.startedAt !== undefined) {
@@ -119,17 +152,22 @@ export class PostgresScanTargetRepository
         }
 
         if (fields.length === 0) {
+            const result = await postgres.query(
+                `
+                SELECT *
+                FROM scan_targets
+                WHERE id = $1
+                `,
+                [id]
+            );
 
-            const existing =
-                await this.findById(id);
-
-            if (!existing) {
+            if (result.rows.length === 0) {
                 throw new Error(
                     `Scan target ${id} not found`
                 );
             }
 
-            return existing;
+            return this.mapRow(result.rows[0]);
         }
 
         values.push(id);
@@ -191,13 +229,13 @@ export class PostgresScanTargetRepository
     }
 
     async markCompleted(
-        id: string,
-        result: ScanResult
+        data: CompleteScanTargetData
     ): Promise<ScanTarget> {
-
-        return this.update(id, {
+        return this.update(data.targetId, {
             status: "completed",
-            result,
+            result: data.scan,
+            inspections: data.inspections,
+            analysis: data.analysis,
             completedAt: new Date(),
         });
     }

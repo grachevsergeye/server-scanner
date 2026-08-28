@@ -7,6 +7,7 @@ import type {
     CreateScanJobData,
     UpdateScanJobData,
     ScanJobRepository,
+    ScanHistorySummary
 } from "./scan-job.repository.js";
 
 import { postgres } from "../postgres.js";
@@ -58,6 +59,176 @@ export class PostgresScanJobRepository
         }
 
         return this.mapRow(result.rows[0]);
+    }
+
+    async findByJobId(
+        id: string
+    ): Promise<ScanJob | null> {
+
+        const result = await postgres.query(
+            `
+            SELECT *
+            FROM scan_jobs
+            WHERE id = $1
+            `,
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        return this.mapRow(result.rows[0]);
+    }
+
+    async findRecent(
+        limit: number
+    ): Promise<ScanHistorySummary[]> {
+        const jobsResult = await postgres.query(
+            `
+            SELECT
+                id,
+                status,
+                total_targets,
+                completed_targets,
+                failed_targets,
+                created_at,
+                started_at,
+                completed_at
+            FROM scan_jobs
+            ORDER BY created_at DESC
+            LIMIT $1
+            `,
+            [limit]
+        );
+
+        if (jobsResult.rows.length === 0) {
+            return [];
+        }
+
+        const jobIds = jobsResult.rows.map(
+            (row) => row.id
+        );
+
+        const targetsResult = await postgres.query(
+            `
+            SELECT
+                job_id,
+                host,
+                status,
+                host_state,
+                created_at
+            FROM scan_targets
+            WHERE job_id = ANY($1::uuid[])
+            ORDER BY created_at ASC
+            `,
+            [jobIds]
+        );
+
+        const portResult = await postgres.query(
+            `
+            SELECT
+                st.job_id,
+                COUNT(sp.id)::integer AS port_count
+            FROM scan_targets st
+            LEFT JOIN scan_ports sp
+                ON sp.scan_target_id = st.id
+            WHERE st.job_id = ANY($1::uuid[])
+            GROUP BY st.job_id
+            `,
+            [jobIds]
+        );
+
+        const findingResult = await postgres.query(
+            `
+            SELECT
+                st.job_id,
+                COUNT(sf.id)::integer AS finding_count
+            FROM scan_targets st
+            LEFT JOIN scan_findings sf
+                ON sf.scan_target_id = st.id
+            WHERE st.job_id = ANY($1::uuid[])
+            GROUP BY st.job_id
+            `,
+            [jobIds]
+        );
+
+        const targetsByJob = new Map<
+            string,
+            ScanHistorySummary["targets"]
+        >();
+
+        for (const row of targetsResult.rows) {
+            const existing =
+                targetsByJob.get(row.job_id) ?? [];
+
+            existing.push({
+                host: row.host,
+                status: row.status,
+                hostState:
+                    row.host_state ?? undefined,
+            });
+
+            targetsByJob.set(
+                row.job_id,
+                existing
+            );
+        }
+
+        const portsByJob =
+            new Map<string, number>();
+
+        for (const row of portResult.rows) {
+            portsByJob.set(
+                row.job_id,
+                row.port_count
+            );
+        }
+
+        const findingsByJob =
+            new Map<string, number>();
+
+        for (const row of findingResult.rows) {
+            findingsByJob.set(
+                row.job_id,
+                row.finding_count
+            );
+        }
+
+        return jobsResult.rows.map((row) => ({
+            id: row.id,
+            status: row.status,
+            totalTargets: row.total_targets,
+            completedTargets:
+                row.completed_targets,
+            failedTargets:
+                row.failed_targets,
+            createdAt:
+                new Date(row.created_at),
+
+            ...(row.started_at
+                ? {
+                    startedAt:
+                        new Date(row.started_at),
+                }
+                : {}),
+
+            ...(row.completed_at
+                ? {
+                    completedAt:
+                        new Date(row.completed_at),
+                }
+                : {}),
+
+            targets:
+                targetsByJob.get(row.id) ?? [],
+
+            portCount:
+                portsByJob.get(row.id) ?? 0,
+
+            findingCount:
+                findingsByJob.get(row.id) ?? 0,
+        }));
     }
 
     async update(

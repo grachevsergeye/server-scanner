@@ -242,7 +242,7 @@ export class NmapService {
             String(config.versionIntensity),
 
             "--host-timeout",
-            "15s",
+            "45s",
 
             "--max-retries",
             "3",

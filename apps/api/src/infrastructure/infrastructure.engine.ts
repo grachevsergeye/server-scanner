@@ -108,22 +108,4 @@ export class InfrastructureEngine {
 
         };
     }
-
-    // private normalizeHeaders(
-    //     headers?: Record<string, string>
-    // ): Record<string, string> {
-
-    //     if (!headers) {
-    //         return {};
-    //     }
-
-    //     return Object.fromEntries(
-    //         Object.entries(headers).map(
-    //             ([key, value]) => [
-    //                 key.toLowerCase(),
-    //                 value
-    //             ]
-    //         )
-    //     );
-    // }
 }

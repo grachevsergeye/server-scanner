@@ -122,4 +122,31 @@ export class ScannerService {
 
         return runningJob;
     }
+
+    async getJob(
+        jobId: string
+    ) {
+        const job =
+            await this.jobRepository.findById(
+                jobId
+            );
+
+        if (!job) {
+            return null;
+        }
+
+        const targets =
+            await this.targetRepository.findByJobId(
+                jobId
+            );
+
+        return {
+            ...job,
+            targets,
+        };
+    }
+
+    async getRecentScans(limit = 50) {
+        return this.jobRepository.findRecent(limit);
+    }
 }

@@ -10,20 +10,11 @@ export class HostInfrastructureEngine {
         ports: PortAnalysis[]
     ): HostInfrastructureAnalysis {
 
-        /*
-         * Only consider ports where
-         * infrastructure was actually detected.
-         */
-
         const detected =
             ports.filter(
                 port =>
                     port.infrastructure.confidence > 0
             );
-
-        /*
-         * Nothing detected.
-         */
 
         if (detected.length === 0) {
 
@@ -43,10 +34,6 @@ export class HostInfrastructureEngine {
 
             };
         }
-
-        /*
-         * Group observations by vendor.
-         */
 
         const vendorGroups =
             new Map<
@@ -76,10 +63,6 @@ export class HostInfrastructureEngine {
             }
         }
 
-        /*
-         * Select the vendor observed
-         * on the most ports.
-         */
 
         const primary =
             [...vendorGroups.entries()]
@@ -113,10 +96,6 @@ export class HostInfrastructureEngine {
             vendorPorts
         ] = primary;
 
-        /*
-         * Combine evidence.
-         */
-
         const evidence =
             [
                 ...new Set(
@@ -126,10 +105,6 @@ export class HostInfrastructureEngine {
                     )
                 )
             ];
-
-        /*
-         * Combine technologies.
-         */
 
         const technologies =
             [
@@ -141,11 +116,6 @@ export class HostInfrastructureEngine {
                 )
             ];
 
-        /*
-         * Highest confidence observed
-         * for this vendor.
-         */
-
         const confidence =
             Math.max(
                 ...vendorPorts.map(
@@ -153,10 +123,6 @@ export class HostInfrastructureEngine {
                         port.infrastructure.confidence
                 )
             );
-
-        /*
-         * Infrastructure type.
-         */
 
         const type =
             vendorPorts
@@ -168,9 +134,6 @@ export class HostInfrastructureEngine {
                 ?.infrastructure.type ??
             "direct";
 
-        /*
-         * Origin visibility.
-         */
 
         const originVisibility =
             vendorPorts.some(
@@ -186,11 +149,6 @@ export class HostInfrastructureEngine {
                 )
                     ? "visible"
                     : "unknown";
-
-        /*
-         * Ports where this infrastructure
-         * was observed.
-         */
 
         const observedPorts =
             vendorPorts.map(

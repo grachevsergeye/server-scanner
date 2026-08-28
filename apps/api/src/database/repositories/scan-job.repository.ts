@@ -27,8 +27,29 @@ export interface UpdateScanJobData {
     error?: string;
 }
 
-export interface ScanJobRepository {
+export interface ScanHistorySummary {
+    id: string;
+    status: string;
 
+    totalTargets: number;
+    completedTargets: number;
+    failedTargets: number;
+
+    createdAt: Date;
+    startedAt?: Date;
+    completedAt?: Date;
+
+    targets: {
+        host: string;
+        status: string;
+        hostState?: string;
+    }[];
+
+    portCount: number;
+    findingCount: number;
+}
+
+export interface ScanJobRepository {
     create(
         data: CreateScanJobData
     ): Promise<ScanJob>;
@@ -36,6 +57,10 @@ export interface ScanJobRepository {
     findById(
         id: string
     ): Promise<ScanJob | null>;
+
+    findRecent(
+        limit: number
+    ): Promise<ScanHistorySummary[]>;
 
     update(
         id: string,

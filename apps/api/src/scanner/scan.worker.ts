@@ -241,10 +241,12 @@ export class ScanWorker {
                 target.id
             );
 
-            await this.targetRepository.markCompleted(
-                target.id,
-                result
-            );
+            await this.targetRepository.markCompleted({
+                targetId: target.id,
+                scan: result,
+                inspections,
+                analysis,
+            });
 
             await this.jobRepository.incrementProgress(
                 target.jobId,

@@ -1,3 +1,6 @@
+import { InspectionResult } from "../inspectors/inspector-result.types.js";
+import { ScanAnalysis } from "../analysis/types.js";
+
 export interface ScanPort {
     port: number;
 
@@ -109,25 +112,15 @@ export interface ScanJob {
 
 export interface ScanTarget {
     id: string;
-
     jobId: string;
-
     host: string;
-
     status: ScanTargetStatus;
-
     result?: ScanResult;
-
-    inspections?: unknown;
-
-    analysis?: unknown;
-
+    inspections?: InspectionResult[];
+    analysis?: ScanAnalysis;
     error?: string;
-
     createdAt: Date;
-
     startedAt?: Date;
-
     completedAt?: Date;
 }
 

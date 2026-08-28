@@ -22,7 +22,7 @@ worker.on(
         );
 
         console.log(
-            "[SCAN WORKER STARTED - NEW CODE]"
+            `[BullMQ] scan target completed: ${job.id}`
         );
 
         console.log(
@@ -31,10 +31,6 @@ worker.on(
 
         console.log(
             "========================================"
-        );
-
-        console.log(
-            `[BullMQ] queue job completed: ${job.id}`
         );
 
     }
