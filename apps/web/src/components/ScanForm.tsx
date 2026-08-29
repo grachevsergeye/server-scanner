@@ -63,15 +63,7 @@ export default function ScanForm({
                 </div>
             </div>
 
-            <div
-                className="
-                    flex
-                    flex-col
-                    gap-4
-                    lg:flex-row
-                    lg:items-end
-                "
-            >
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
                 <div className="flex-1">
                     <label
                         className="
@@ -85,32 +77,38 @@ export default function ScanForm({
                         {t("target")}
                     </label>
 
-                    <input
-                        type="text"
+                    <textarea
                         value={target}
                         disabled={disabled}
                         onChange={(event) =>
-                            onChange(
-                                event.target.value
-                            )
+                            onChange(event.target.value)
                         }
                         onKeyDown={(event) => {
                             if (
-                                event.key === "Enter"
+                                event.key === "Enter" &&
+                                (event.ctrlKey || event.metaKey)
                             ) {
+                                event.preventDefault();
                                 onSubmit();
                             }
                         }}
-                        placeholder="192.168.1.1"
+                        placeholder={`8.8.8.8
+            1.1.1.1
+            5.253.57.246
+            5.253.57.247`}
+                        rows={5}
                         className="
-                            h-11
+                            min-h-32
                             w-full
+                            resize-y
                             rounded-lg
                             border
                             border-gray-700
                             bg-[var(--bg-primary)]
                             px-3
+                            py-3
                             text-sm
+                            leading-6
                             text-[var(--text-primary)]
                             outline-none
                             transition
@@ -122,16 +120,25 @@ export default function ScanForm({
                             disabled:opacity-50
                         "
                     />
+
+                    <span
+                        className="
+                            mt-2
+                            block
+                            text-xs
+                            text-[var(--text-secondary)]
+                        "
+                    >
+                        {t("targetHelp")}
+                    </span>
                 </div>
 
                 <button
-                    disabled={
-                        disabled ||
-                        !target.trim()
-                    }
+                    disabled={disabled || !target.trim()}
                     onClick={onSubmit}
                     className="
                         h-11
+                        shrink-0
                         rounded-lg
                         bg-blue-500
                         px-5
@@ -144,11 +151,10 @@ export default function ScanForm({
                         hover:bg-blue-400
                         disabled:cursor-not-allowed
                         disabled:opacity-40
+                        lg:mb-7
                     "
                 >
-                    {disabled
-                        ? t("scanning")
-                        : t("startScan")}
+                    {disabled ? t("scanning") : t("startScan")}
                 </button>
             </div>
             <span
@@ -159,7 +165,6 @@ export default function ScanForm({
                     text-[var(--text-secondary)]
                 "
             >
-                {t("targetHelp")}
             </span>
         </section>
     );

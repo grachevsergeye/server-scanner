@@ -11,8 +11,9 @@ import {
 export default function FindingDetails() {
     const { t } = useTranslation();
 
-    const { scanId, findingId } = useParams<{
+    const { scanId, targetId, findingId } = useParams<{
         scanId: string;
+        targetId: string;
         findingId: string;
     }>();
 
@@ -44,19 +45,20 @@ export default function FindingDetails() {
 
                 setScan(result);
 
-                let found: SecurityFinding | undefined;
+                const target = result.targets?.find(
+                    (item) => item.id === targetId
+                );
 
-                for (const target of result.targets ?? []) {
-                    const targetFinding =
-                        target.analysis?.findings?.find(
-                            (item) => item.id === findingId
-                        );
+                const found = target?.analysis?.findings?.find(
+                    (item) => item.id === findingId
+                );
 
-                    if (targetFinding) {
-                        found = targetFinding;
-                        break;
-                    }
+                if (!found) {
+                    setError("Finding not found");
+                    return;
                 }
+
+                setFinding(found);
 
                 if (!found) {
                     setError("Finding not found");
@@ -84,7 +86,11 @@ export default function FindingDetails() {
         return () => {
             cancelled = true;
         };
-    }, [scanId, findingId]);
+        }, [
+            scanId,
+            targetId,
+            findingId,
+        ]);
 
     if (loading) {
         return (
@@ -103,7 +109,7 @@ export default function FindingDetails() {
                     to="/findings"
                     className="text-sm text-muted-foreground hover:text-foreground"
                 >
-                    ← Back to findings
+                    {t("Backfindings")}
                 </Link>
 
                 <div className="mt-6 rounded-xl border border-red-400/20 bg-red-400/5 p-5 text-sm text-red-400">
@@ -144,11 +150,12 @@ export default function FindingDetails() {
         severityStyles[finding.severity] ??
         severityStyles.info;
 
-    const target = scan.targets?.find((target) =>
-        target.analysis?.findings?.some(
-            (item) => item.id === finding.id
-        )
-    );
+    const target =
+        scan.targets?.find(
+            (target) =>
+                target.id ===
+                targetId
+        );
 
     return (
         <main className="mx-auto w-full max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
@@ -157,7 +164,7 @@ export default function FindingDetails() {
                     to="/findings"
                     className="text-sm text-muted-foreground hover:text-foreground"
                 >
-                    ← Back to findings
+                    {t("Backfindings")}
                 </Link>
 
                 <div className="mt-5">
@@ -166,7 +173,7 @@ export default function FindingDetails() {
                     </div>
 
                     <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-                        Finding details
+                        {t("findingdetails")}
                     </h1>
 
                     <p className="mt-1 font-mono text-xs text-[var(--text-secondary)]">
@@ -206,7 +213,7 @@ export default function FindingDetails() {
                             </span>
 
                             <h2 className="mt-4 text-xl font-semibold text-[var(--text-primary)]">
-                                {finding.title}
+                                {t(finding.titleKey)}
                             </h2>
                         </div>
 
@@ -218,7 +225,7 @@ export default function FindingDetails() {
                     </div>
 
                     <p className="mt-5 max-w-4xl text-sm leading-7 text-[var(--text-secondary)]">
-                        {finding.description}
+                        {t(finding.descriptionKey)}
                     </p>
 
                     {finding.service && (
@@ -236,7 +243,7 @@ export default function FindingDetails() {
                             {target && (
                                 <div className="rounded-lg border border-gray-700 bg-black/20 p-4">
                                     <div className="text-xs text-[var(--text-secondary)]">
-                                        Host
+                                        {t("host")}
                                     </div>
 
                                     <div className="mt-1 font-mono text-sm">
@@ -256,16 +263,19 @@ export default function FindingDetails() {
                     {finding.evidence.length > 0 ? (
                         <div className="mt-4 rounded-lg border border-gray-700 bg-black/20 p-4">
                             <ul className="space-y-2">
-                                {finding.evidence.map(
-                                    (item, index) => (
-                                        <li
-                                            key={`${item}-${index}`}
-                                            className="font-mono text-xs leading-6 text-[var(--text-secondary)]"
-                                        >
-                                            {item}
-                                        </li>
-                                    )
-                                )}
+                                {finding.evidence.map((item, index) => (
+                                    <li
+                                        key={`${item.key}-${index}`}
+                                        className="
+                                            font-mono
+                                            text-xs
+                                            leading-5
+                                            text-[var(--text-secondary)]
+                                        "
+                                    >
+                                        {t(item.key, item.params)}
+                                    </li>
+                                ))}
                             </ul>
                         </div>
                     ) : (
@@ -279,7 +289,7 @@ export default function FindingDetails() {
                     <div className="grid gap-4 sm:grid-cols-3">
                         <div>
                             <div className="text-xs text-[var(--text-secondary)]">
-                                Confidence
+                                {t("confidence")}
                             </div>
 
                             <div className="mt-1 text-sm font-medium">
@@ -292,7 +302,7 @@ export default function FindingDetails() {
 
                         <div>
                             <div className="text-xs text-[var(--text-secondary)]">
-                                Scan
+                                {t("scan")}
                             </div>
 
                             <Link
@@ -306,7 +316,7 @@ export default function FindingDetails() {
                         {target && (
                             <div>
                                 <div className="text-xs text-[var(--text-secondary)]">
-                                    Target
+                                    {t("target")}
                                 </div>
 
                                 <div className="mt-1 font-mono text-sm">

@@ -46,24 +46,31 @@ export class ExposedRedisRule
 
             findings.push({
                 id: this.id,
-
                 severity: "critical",
 
-                title: "Redis service exposed without authentication",
+                titleKey:
+                    "findings.exposedRedis.title",
 
-                description:
-                    "A Redis service is publicly accessible " +
-                    "without confirmed authentication.",
+                descriptionKey:
+                    "findings.exposedRedis.description",
 
                 evidence: [
-                    `Port ${port.port} is running Redis.`,
-                    "Redis authentication was not detected.",
+                    {
+                        key:
+                            "findings.exposedRedis.evidence.portRunningService",
+                        params: {
+                            port: port.port,
+                            service: "Redis",
+                        },
+                    },
+                    {
+                        key:
+                            "findings.exposedRedis.evidence.authenticationNotDetected",
+                    },
                 ],
 
                 port: port.port,
-
                 service: "redis",
-
                 confidence:
                     authentication?.required === false
                         ? 1

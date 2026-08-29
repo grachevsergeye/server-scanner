@@ -87,6 +87,7 @@ export default function FindingsList({
                         text-sm
                         text-[var(--text-secondary)]
                         sm:px-6
+                        text-center
                     "
                 >
                     <span className="animate-pulse">

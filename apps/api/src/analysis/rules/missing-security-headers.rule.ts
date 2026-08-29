@@ -73,23 +73,26 @@ export class MissingSecurityHeadersRule
 
             findings.push({
                 id: this.id,
-
                 severity: "low",
 
-                title: "Missing security headers",
+                titleKey:
+                    "findings.missingSecurityHeaders.title",
 
-                description:
-                    "The HTTP service is missing one or more " +
-                    "recommended security headers.",
+                descriptionKey:
+                    "findings.missingSecurityHeaders.description",
 
                 evidence: [
-                    `Missing: ${missing.join(", ")}`,
+                    {
+                        key:
+                            "findings.missingSecurityHeaders.evidence.missing",
+                        params: {
+                            headers: missing.join(", "),
+                        },
+                    },
                 ],
 
                 port: inspection.port,
-
                 service: inspection.service,
-
                 confidence: 1,
             });
         }

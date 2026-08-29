@@ -2,14 +2,7 @@ import pg from "pg";
 
 const { Pool } = pg;
 
-console.log("[PostgreSQL config]", {
-    host: JSON.stringify(process.env.POSTGRES_HOST),
-    port: JSON.stringify(process.env.POSTGRES_PORT),
-    user: JSON.stringify(process.env.POSTGRES_USER),
-    password: JSON.stringify(process.env.POSTGRES_PASSWORD),
-    passwordLength: process.env.POSTGRES_PASSWORD?.length,
-    database: JSON.stringify(process.env.POSTGRES_DB),
-});
+console.log("[PostgreSQL and Worker are working]");
 
 export const postgres = new Pool({
     host: process.env.POSTGRES_HOST ?? "127.0.0.1",

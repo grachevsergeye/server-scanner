@@ -9,6 +9,7 @@ import Scans from "./routes/Scans";
 import Findings from "./routes/Findings";
 import ScanDetails from "./routes/ScanDetails";
 import FindingDetails from "./components/findings/FindingDetails";
+import ScanFindings from "./routes/ScanFindings";
 
 function NotFound() {
     return (
@@ -42,7 +43,12 @@ export default function App() {
                 />
 
                 <Route
-                    path="/findings/:scanId/:findingId"
+                    path="/findings/:scanId"
+                    element={<ScanFindings />}
+                />
+
+                <Route
+                    path="/findings/:scanId/:targetId/:findingId"
                     element={<FindingDetails />}
                 />
 

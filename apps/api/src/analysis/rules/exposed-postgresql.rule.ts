@@ -40,24 +40,45 @@ export class ExposedPostgresqlRule
 
                 severity: "critical",
 
-                title:
-                    "PostgreSQL exposed without authentication",
+                titleKey:
+                    "findings.exposedPostgresql.title",
 
-                description:
-                    "A PostgreSQL service is publicly accessible " +
-                    "without authentication.",
+                descriptionKey:
+                    "findings.exposedPostgresql.description",
 
                 evidence: [
-                    `Port ${inspection.port} is running PostgreSQL.`,
-                    "PostgreSQL authentication was not detected.",
+                    {
+                        key:
+                            "findings.exposedPostgresql.evidence.portRunningService",
+                        params: {
+                            port: inspection.port,
+                            service: "PostgreSQL",
+                        },
+                    },
+                    {
+                        key:
+                            "findings.exposedPostgresql.evidence.authenticationNotDetected",
+                    },
+
                     ...(inspection.data.product
                         ? [
-                            `Product: ${inspection.data.product}`,
+                            {
+                                key: "findings.common.detectedProduct",
+                                params: {
+                                    product: inspection.data.product,
+                                },
+                            },
                         ]
                         : []),
+
                     ...(inspection.data.version
                         ? [
-                            `Version: ${inspection.data.version}`,
+                            {
+                                key: "findings.common.detectedVersion",
+                                params: {
+                                    version: inspection.data.version,
+                                },
+                            },
                         ]
                         : []),
                 ],

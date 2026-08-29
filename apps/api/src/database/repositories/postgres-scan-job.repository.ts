@@ -84,151 +84,129 @@ export class PostgresScanJobRepository
     async findRecent(
         limit: number
     ): Promise<ScanHistorySummary[]> {
-        const jobsResult = await postgres.query(
-            `
-            SELECT
-                id,
-                status,
-                total_targets,
-                completed_targets,
-                failed_targets,
-                created_at,
-                started_at,
-                completed_at
-            FROM scan_jobs
-            ORDER BY created_at DESC
-            LIMIT $1
-            `,
-            [limit]
-        );
+        const result =
+            await postgres.query(
+                `
+                SELECT
+                    sj.id,
+                    sj.status,
+                    sj.total_targets,
+                    sj.completed_targets,
+                    sj.failed_targets,
+                    sj.created_at,
+                    sj.started_at,
+                    sj.completed_at,
 
-        if (jobsResult.rows.length === 0) {
-            return [];
-        }
+                    COALESCE(
+                        (
+                            SELECT jsonb_agg(
+                                jsonb_build_object(
+                                    'host',
+                                    st.host,
+                                    'status',
+                                    st.status,
+                                    'hostState',
+                                    COALESCE(
+                                        st.host_state,
+                                        st.result->>'state'
+                                    )
+                                )
+                                ORDER BY st.created_at ASC
+                            )
+                            FROM scan_targets st
+                            WHERE st.job_id = sj.id
+                        ),
+                        '[]'::jsonb
+                    ) AS targets,
 
-        const jobIds = jobsResult.rows.map(
-            (row) => row.id
-        );
+                    COALESCE(
+                        (
+                            SELECT SUM(
+                                jsonb_array_length(
+                                    COALESCE(
+                                        st.result->'ports',
+                                        '[]'::jsonb
+                                    )
+                                )
+                            )
+                            FROM scan_targets st
+                            WHERE st.job_id = sj.id
+                        ),
+                        0
+                    )::integer AS port_count,
 
-        const targetsResult = await postgres.query(
-            `
-            SELECT
-                job_id,
-                host,
-                status,
-                host_state,
-                created_at
-            FROM scan_targets
-            WHERE job_id = ANY($1::uuid[])
-            ORDER BY created_at ASC
-            `,
-            [jobIds]
-        );
+                    COALESCE(
+                        (
+                            SELECT SUM(
+                                jsonb_array_length(
+                                    COALESCE(
+                                        st.analysis->'findings',
+                                        '[]'::jsonb
+                                    )
+                                )
+                            )
+                            FROM scan_targets st
+                            WHERE st.job_id = sj.id
+                        ),
+                        0
+                    )::integer AS finding_count
 
-        const portResult = await postgres.query(
-            `
-            SELECT
-                st.job_id,
-                COUNT(sp.id)::integer AS port_count
-            FROM scan_targets st
-            LEFT JOIN scan_ports sp
-                ON sp.scan_target_id = st.id
-            WHERE st.job_id = ANY($1::uuid[])
-            GROUP BY st.job_id
-            `,
-            [jobIds]
-        );
+                FROM scan_jobs sj
 
-        const findingResult = await postgres.query(
-            `
-            SELECT
-                st.job_id,
-                COUNT(sf.id)::integer AS finding_count
-            FROM scan_targets st
-            LEFT JOIN scan_findings sf
-                ON sf.scan_target_id = st.id
-            WHERE st.job_id = ANY($1::uuid[])
-            GROUP BY st.job_id
-            `,
-            [jobIds]
-        );
+                ORDER BY sj.created_at DESC
 
-        const targetsByJob = new Map<
-            string,
-            ScanHistorySummary["targets"]
-        >();
+                LIMIT $1
+                `,
+                [limit]
+            );
 
-        for (const row of targetsResult.rows) {
-            const existing =
-                targetsByJob.get(row.job_id) ?? [];
-
-            existing.push({
-                host: row.host,
+        return result.rows.map(
+            (row) => ({
+                id: row.id,
                 status: row.status,
-                hostState:
-                    row.host_state ?? undefined,
-            });
 
-            targetsByJob.set(
-                row.job_id,
-                existing
-            );
-        }
+                totalTargets:
+                    row.total_targets,
 
-        const portsByJob =
-            new Map<string, number>();
+                completedTargets:
+                    row.completed_targets,
 
-        for (const row of portResult.rows) {
-            portsByJob.set(
-                row.job_id,
-                row.port_count
-            );
-        }
+                failedTargets:
+                    row.failed_targets,
 
-        const findingsByJob =
-            new Map<string, number>();
+                createdAt:
+                    new Date(
+                        row.created_at
+                    ),
 
-        for (const row of findingResult.rows) {
-            findingsByJob.set(
-                row.job_id,
-                row.finding_count
-            );
-        }
+                ...(row.started_at
+                    ? {
+                        startedAt:
+                            new Date(
+                                row.started_at
+                            ),
+                    }
+                    : {}),
 
-        return jobsResult.rows.map((row) => ({
-            id: row.id,
-            status: row.status,
-            totalTargets: row.total_targets,
-            completedTargets:
-                row.completed_targets,
-            failedTargets:
-                row.failed_targets,
-            createdAt:
-                new Date(row.created_at),
+                ...(row.completed_at
+                    ? {
+                        completedAt:
+                            new Date(
+                                row.completed_at
+                            ),
+                    }
+                    : {}),
 
-            ...(row.started_at
-                ? {
-                    startedAt:
-                        new Date(row.started_at),
-                }
-                : {}),
+                targets:
+                    row.targets ?? [],
 
-            ...(row.completed_at
-                ? {
-                    completedAt:
-                        new Date(row.completed_at),
-                }
-                : {}),
+                portCount:
+                    row.port_count ?? 0,
 
-            targets:
-                targetsByJob.get(row.id) ?? [],
-
-            portCount:
-                portsByJob.get(row.id) ?? 0,
-
-            findingCount:
-                findingsByJob.get(row.id) ?? 0,
-        }));
+                findingCount:
+                    row.finding_count ?? 0,
+            })
+        );
     }
 
     async update(

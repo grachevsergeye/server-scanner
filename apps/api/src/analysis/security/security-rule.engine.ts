@@ -51,7 +51,7 @@ export class SecurityRuleEngine {
             findings.map(finding => ({
                 id: finding.id,
                 severity: finding.severity,
-                title: finding.title,
+                title: finding.titleKey,
                 port: finding.port,
                 service: finding.service,
                 confidence: finding.confidence

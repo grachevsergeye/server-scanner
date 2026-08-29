@@ -48,7 +48,7 @@ export default function Sidebar({
         {
             key: "findings",
             to: "/findings",
-            label: t("findings"),
+            label: t("findings1"),
             icon: ShieldAlert,
         },
     ];

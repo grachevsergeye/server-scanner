@@ -1,285 +1,494 @@
-import type {
-    ScanJob,
-    SecurityFinding,
-} from "../api.js";
+import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
+    ChevronDown,
+    ChevronRight,
+} from "lucide-react";
+
+import type { ScanJob } from "../api";
+import PortsTable from "./PortsTable";
+import FindingCard from "./findings/FindingCard";
 
 interface Props {
     scan: ScanJob;
-    findings: SecurityFinding[];
 }
 
-function formatDate(
-    value?: string
-) {
+function formatDate(value?: string) {
     if (!value) {
         return "—";
     }
 
-    return new Date(value).toLocaleString();
-}
-
-function severityClass(
-    severity: SecurityFinding["severity"]
-) {
-    switch (severity) {
-        case "critical":
-            return "text-red-500";
-
-        case "high":
-            return "text-orange-500";
-
-        case "medium":
-            return "text-yellow-500";
-
-        case "low":
-            return "text-blue-500";
-
-        case "info":
-            return "text-muted-foreground";
-    }
+    return new Intl.DateTimeFormat(
+        undefined,
+        {
+            dateStyle: "medium",
+            timeStyle: "medium",
+        }
+    ).format(new Date(value));
 }
 
 export default function ScanHistoryDetails({
     scan,
-    findings,
 }: Props) {
+    const { t } = useTranslation();
+
+    const targets =
+    scan.targets ?? [];
+
+    const [expandedTargets, setExpandedTargets] =
+        useState<Set<string>>(
+            () => new Set()
+        );
+
+    const toggleTarget = (
+        targetId: string
+    ) => {
+        setExpandedTargets(
+            (current) => {
+                const next =
+                    new Set(current);
+
+                if (
+                    next.has(targetId)
+                ) {
+                    next.delete(
+                        targetId
+                    );
+                } else {
+                    next.add(
+                        targetId
+                    );
+                }
+
+                return next;
+            }
+        );
+    };
+
+    const totalFindings = useMemo(
+        () =>
+            (scan.targets ?? []).reduce(
+                (total, target) =>
+                    total +
+                    (target.analysis
+                        ?.findings
+                        ?.length ?? 0),
+                0
+            ),
+        [scan.targets]
+    );
+
     return (
         <div className="space-y-6">
-
-            {/* Scan summary */}
-
             <section
                 className="
                     rounded-xl
                     border
                     border-gray-700
-                    bg-[var(--bg-secondary)]
-                    p-6
+                    bg-white/[0.025]
+                    p-5
+                    sm:p-6
                 "
             >
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-
+                <div
+                    className="
+                        grid
+                        gap-6
+                        sm:grid-cols-2
+                        lg:grid-cols-4
+                    "
+                >
                     <div>
-                        <div className="text-sm text-muted-foreground">
-                            Status
+                        <div className="text-xs uppercase tracking-wide text-[var(--text-secondary)]">
+                            {t("statusLabel")}
                         </div>
 
                         <div className="mt-1 font-medium">
-                            {scan.status}
+                            {t(
+                                `status.${scan.status}`
+                            )}
                         </div>
                     </div>
 
                     <div>
-                        <div className="text-sm text-muted-foreground">
-                            Targets
+                        <div className="text-xs uppercase tracking-wide text-[var(--text-secondary)]">
+                            {t("targets")}
                         </div>
 
                         <div className="mt-1 font-medium">
-                            {scan.completedTargets}
+                            {
+                                scan.completedTargets
+                            }
                             /
-                            {scan.totalTargets}
+                            {
+                                scan.totalTargets
+                            }
                         </div>
                     </div>
 
                     <div>
-                        <div className="text-sm text-muted-foreground">
-                            Failed
+                        <div className="text-xs uppercase tracking-wide text-[var(--text-secondary)]">
+                            {t("failed")}
                         </div>
 
                         <div className="mt-1 font-medium">
-                            {scan.failedTargets}
+                            {
+                                scan.failedTargets
+                            }
                         </div>
                     </div>
 
                     <div>
-                        <div className="text-sm text-muted-foreground">
-                            Created
+                        <div className="text-xs uppercase tracking-wide text-[var(--text-secondary)]">
+                            {t("created")}
                         </div>
 
-                        <div className="mt-1 font-medium">
+                        <div className="mt-1 text-sm font-medium">
                             {formatDate(
                                 scan.createdAt
                             )}
                         </div>
                     </div>
-
                 </div>
             </section>
-
-            {/* Targets */}
 
             <section>
                 <div className="mb-4">
                     <h2 className="text-xl font-semibold">
-                        Targets
+                        {t(
+                            "targetCount",
+                            {
+                                count:
+                                    targets.length,
+                            }
+                        )}
                     </h2>
+
+                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                        {t(
+                            "scanTargetsDescription"
+                        )}
+                    </p>
                 </div>
 
                 <div className="space-y-3">
-                    {scan.targets?.map(
-                        (target) => (
-                            <div
-                                key={target.id}
-                                className="
-                                    rounded-xl
-                                    border
-                                    border-gray-700
-                                    bg-[var(--bg-secondary)]
-                                    p-5
-                                "
-                            >
-                                <div className="flex items-start justify-between gap-4">
-                                    <div>
-                                        <div className="font-medium">
-                                            {target.host}
+                    {(scan.targets ?? []).map(
+                        (target) => {
+                            const expanded =
+                                expandedTargets.has(
+                                    target.id
+                                );
+
+                            const ports =
+                                target.result
+                                    ?.ports ??
+                                [];
+
+                            const state =
+                                target.result
+                                    ?.state ??
+                                target.hostState ??
+                                "unknown";
+
+                            return (
+                                <div
+                                    key={
+                                        target.id
+                                    }
+                                    className="
+                                        overflow-hidden
+                                        rounded-xl
+                                        border
+                                        border-gray-700
+                                        bg-white/[0.025]
+                                    "
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            toggleTarget(
+                                                target.id
+                                            )
+                                        }
+                                        className="
+                                            flex
+                                            w-full
+                                            items-center
+                                            justify-between
+                                            gap-4
+                                            p-5
+                                            text-left
+                                            transition
+                                            hover:bg-white/[0.025]
+                                        "
+                                    >
+                                        <div
+                                            className="
+                                                flex
+                                                min-w-0
+                                                items-center
+                                                gap-3
+                                            "
+                                        >
+                                            <div className="text-[var(--text-secondary)]">
+                                                {expanded ? (
+                                                    <ChevronDown
+                                                        size={
+                                                            18
+                                                        }
+                                                    />
+                                                ) : (
+                                                    <ChevronRight
+                                                        size={
+                                                            18
+                                                        }
+                                                    />
+                                                )}
+                                            </div>
+
+                                            <div className="min-w-0">
+                                                <div className="font-mono text-sm font-medium">
+                                                    {
+                                                        target.host
+                                                    }
+                                                </div>
+
+                                                <div
+                                                    className="
+                                                        mt-1
+                                                        flex
+                                                        flex-wrap
+                                                        gap-x-3
+                                                        gap-y-1
+                                                        text-xs
+                                                        text-[var(--text-secondary)]
+                                                    "
+                                                >
+                                                    <span>
+                                                        {t("state")}:{" "}
+                                                        {t(`hostState.${state}`, {
+                                                            defaultValue: state,
+                                                        })}
+                                                    </span>
+
+                                                    <span>
+                                                        {t(
+                                                            "portsDiscovered"
+                                                        )}
+                                                        {
+                                                            ports.length
+                                                        }{" "}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
 
-                                        <div className="mt-1 text-sm text-muted-foreground">
-                                            {target.hostState ??
-                                                "Unknown state"}
-                                        </div>
-                                    </div>
+                                        <span
+                                            className="
+                                                shrink-0
+                                                rounded-full
+                                                bg-white/5
+                                                px-2.5
+                                                py-1
+                                                text-xs
+                                                text-[var(--text-secondary)]
+                                            "
+                                        >
+                                            {t(
+                                                `targetStatus.${target.status}`,
+                                                {
+                                                    defaultValue:
+                                                        target.status,
+                                                }
+                                            )}
+                                        </span>
+                                    </button>
 
-                                    <div className="text-sm">
-                                        {target.status}
-                                    </div>
+                                    {expanded && (
+                                        <div
+                                            className="
+                                                space-y-5
+                                                border-t
+                                                border-gray-700
+                                                p-5
+                                            "
+                                        >
+                                            <div
+                                                className="
+                                                    grid
+                                                    gap-3
+                                                    sm:grid-cols-2
+                                                    lg:grid-cols-4
+                                                "
+                                            >
+                                                <div>
+                                                    <div className="text-xs text-[var(--text-secondary)]">
+                                                        {t(
+                                                            "targetId"
+                                                        )}
+                                                    </div>
+
+                                                    <div className="mt-1 truncate font-mono text-xs">
+                                                        {
+                                                            target.id
+                                                        }
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <div className="text-xs text-[var(--text-secondary)]">
+                                                        {t(
+                                                            "hostState1"
+                                                        )}
+                                                    </div>
+
+                                                    <div className="mt-1 text-sm">
+                                                        {t(`hostState.${state}`, {
+                                                            defaultValue: state,
+                                                        })}
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <div className="text-xs text-[var(--text-secondary)]">
+                                                        {t(
+                                                            "started"
+                                                        )}
+                                                    </div>
+
+                                                    <div className="mt-1 text-xs">
+                                                        {formatDate(
+                                                            target.startedAt
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <div className="text-xs text-[var(--text-secondary)]">
+                                                        {t(
+                                                            "completed"
+                                                        )}
+                                                    </div>
+
+                                                    <div className="mt-1 text-xs">
+                                                        {formatDate(
+                                                            target.completedAt
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <PortsTable
+                                                ports={
+                                                    ports
+                                                }
+                                            />
+                                        </div>
+                                    )}
                                 </div>
-
-                                {target.result && (
-                                    <div className="mt-4 text-sm text-muted-foreground">
-                                        {target.result.ports.length}
-                                        {" "}
-                                        ports discovered
-                                    </div>
-                                )}
-                            </div>
-                        )
+                            );
+                        }
                     )}
                 </div>
             </section>
 
-            {/* Findings */}
-
             <section>
-                <div className="mb-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h2 className="text-xl font-semibold">
-                                Findings
-                            </h2>
+                <div
+                    className="
+                        mb-4
+                        flex
+                        items-end
+                        justify-between
+                        gap-4
+                    "
+                >
+                    <div>
+                        <h2 className="text-xl font-semibold">
+                            {t(
+                                "findings1"
+                            )}
+                        </h2>
 
-                            <p className="mt-1 text-sm text-muted-foreground">
-                                Security findings discovered during this scan.
-                            </p>
-                        </div>
-
-                        <div className="text-sm text-muted-foreground">
-                            {findings.length}
-                        </div>
+                        <p className="mt-1 text-sm text-[var(--text-secondary)] text-center">
+                            {t(
+                                "securityFindingsDescription"
+                            )}
+                        </p>
                     </div>
+
+                    <span
+                        className="
+                            rounded-full
+                            bg-white/5
+                            px-2.5
+                            py-1
+                            text-xs
+                            text-[var(--text-secondary)]
+                        "
+                    >
+                        {totalFindings}
+                    </span>
                 </div>
 
-                {findings.length === 0 ? (
+                {totalFindings === 0 ? (
                     <div
                         className="
                             rounded-xl
                             border
                             border-gray-700
-                            bg-[var(--bg-secondary)]
+                            bg-white/[0.025]
                             p-8
                             text-center
-                            text-muted-foreground
+                            text-sm
+                            text-[var(--text-secondary)]
                         "
                     >
-                        No findings were detected.
+                        {t("noFindings")}
                     </div>
                 ) : (
-                    <div className="space-y-3">
-                        {findings.map(
-                            (finding) => (
-                                <div
-                                    key={finding.id}
-                                    className="
-                                        rounded-xl
-                                        border
-                                        border-gray-700
-                                        bg-[var(--bg-secondary)]
-                                        p-5
-                                    "
-                                >
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="min-w-0">
-                                            <h3 className="font-medium">
-                                                {finding.title}
-                                            </h3>
-
-                                            <div className="mt-1 text-sm text-muted-foreground">
-                                                {finding.service ??
-                                                    "Unknown service"}
-
-                                                {finding.port !==
-                                                    undefined &&
-                                                    ` · Port ${finding.port}`}
-                                            </div>
-                                        </div>
-
-                                        <div
-                                            className={`shrink-0 text-sm font-semibold uppercase ${severityClass(
-                                                finding.severity
-                                            )}`}
-                                        >
-                                            {finding.severity}
-                                        </div>
-                                    </div>
-
-                                    <p className="mt-4 text-sm text-muted-foreground">
-                                        {finding.description}
-                                    </p>
-
-                                    {finding.evidence.length >
-                                        0 && (
-                                        <div className="mt-4">
-                                            <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                                Evidence
-                                            </div>
-
-                                            <div className="space-y-1">
-                                                {finding.evidence.map(
-                                                    (
-                                                        evidence,
-                                                        index
-                                                    ) => (
-                                                        <div
-                                                            key={
-                                                                index
-                                                            }
-                                                            className="
-                                                                rounded-md
-                                                                bg-black/20
-                                                                px-3
-                                                                py-2
-                                                                font-mono
-                                                                text-xs
-                                                            "
-                                                        >
-                                                            {evidence}
-                                                        </div>
-                                                    )
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div className="mt-4 text-xs text-muted-foreground">
-                                        Confidence:{" "}
-                                        {Math.round(
-                                            finding.confidence *
-                                                100
-                                        )}
-                                        %
-                                    </div>
-                                </div>
-                            )
+                    <div
+                        className="
+                            overflow-hidden
+                            rounded-xl
+                            border
+                            border-gray-700
+                            bg-white/[0.025]
+                            divide-y
+                            divide-gray-700
+                        "
+                    >
+                        {(scan.targets ?? []).flatMap(
+                            (target) =>
+                                (
+                                    target.analysis
+                                        ?.findings ??
+                                    []
+                                ).map(
+                                    (
+                                        finding
+                                    ) => (
+                                        <FindingCard
+                                            key={`${target.id}-${finding.id}`}
+                                            finding={
+                                                finding
+                                            }
+                                            scanId={
+                                                scan.id
+                                            }
+                                            targetId={
+                                                target.id
+                                            }
+                                            host={
+                                                target.host
+                                            }
+                                            createdAt={
+                                                target.completedAt ??
+                                                scan.completedAt ??
+                                                scan.createdAt
+                                            }
+                                        />
+                                    )
+                                )
                         )}
                     </div>
                 )}

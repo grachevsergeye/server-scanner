@@ -10,8 +10,12 @@ import type {
 interface SoftwareVersionRule {
     product: string;
     minimumVersion: string;
-    severity: "low" | "medium" | "high" | "critical";
-    reason: string;
+    severity:
+        | "low"
+        | "medium"
+        | "high"
+        | "critical";
+    reasonKey: string;
 }
 
 function compareVersions(
@@ -113,25 +117,41 @@ export class OutdatedSoftwareRule
 
             findings.push({
                 id: this.id,
-
                 severity: rule.severity,
 
-                title:
-                    `Outdated ${product} version`,
+                titleKey:
+                    "findings.outdatedSoftware.title",
 
-                description:
-                    rule.reason,
+                descriptionKey:
+                    rule.reasonKey,
 
                 evidence: [
-                    `Detected product: ${product}`,
-                    `Detected version: ${version}`,
-                    `Minimum baseline: ${rule.minimumVersion}`,
+                    {
+                        key:
+                            "findings.outdatedSoftware.evidence.detectedProduct",
+                        params: {
+                            product,
+                        },
+                    },
+                    {
+                        key:
+                            "findings.outdatedSoftware.evidence.detectedVersion",
+                        params: {
+                            version,
+                        },
+                    },
+                    {
+                        key:
+                            "findings.outdatedSoftware.evidence.minimumBaseline",
+                        params: {
+                            version:
+                                rule.minimumVersion,
+                        },
+                    },
                 ],
 
                 port: inspection.port,
-
                 service: inspection.service,
-
                 confidence: 0.9,
             });
         }
@@ -145,15 +165,14 @@ const outdatedSoftware: SoftwareVersionRule[] = [
         product: "nginx",
         minimumVersion: "1.25.0",
         severity: "medium",
-        reason:
-            "The detected nginx version is older than the supported baseline.",
+        reasonKey:
+            "findings.outdatedSoftware.reasons.nginx",
     },
-
     {
         product: "redis",
         minimumVersion: "7.0.0",
         severity: "medium",
-        reason:
-            "The detected Redis version is older than the supported baseline.",
+        reasonKey:
+            "findings.outdatedSoftware.reasons.redis",
     },
 ];

@@ -5,6 +5,8 @@ import {
 import ThemeSelector from "../context/ThemeSelector";
 import { useTheme } from "../context/ThemeContext";
 import CustomLanguageSwitcher from "./langcomponent/CustomLanguageSwitcher";
+import ScanSoundToggle
+    from "./ScanSoundToggle";
 
 interface TopbarProps {
     onMenuClick?: () => void;
@@ -69,7 +71,7 @@ export default function Topbar({
                     </div>
                     <ThemeSelector />
 
-                <div className="mt-auto">
+                <div className="mt-auto hidden lg:block">
                     <div
                         className="
                             flex
@@ -106,6 +108,9 @@ export default function Topbar({
                         </span>
                     </div>
                 </div>
+
+                    <ScanSoundToggle />
+
             </div>
         </header>
     );

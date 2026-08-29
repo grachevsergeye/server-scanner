@@ -37,34 +37,57 @@ export class ExposedMysqlRule
 
             findings.push({
                 id: this.id,
-
                 severity: "critical",
 
-                title: "MySQL exposed without authentication",
+                titleKey:
+                    "findings.exposedMysql.title",
 
-                description:
-                    "A MySQL service is publicly accessible " +
-                    "without authentication.",
+                descriptionKey:
+                    "findings.exposedMysql.description",
 
                 evidence: [
-                    `Port ${inspection.port} is running MySQL.`,
-                    "MySQL authentication was not detected.",
+                    {
+                        key:
+                            "findings.exposedMysql.evidence.portRunningService",
+                        params: {
+                            port: inspection.port,
+                            service: "MySQL",
+                        },
+                    },
+                    {
+                        key:
+                            "findings.exposedMysql.evidence.authenticationNotDetected",
+                    },
+
                     ...(inspection.data.product
                         ? [
-                            `Product: ${inspection.data.product}`,
+                            {
+                                key:
+                                    "findings.common.detectedProduct",
+                                params: {
+                                    product:
+                                        inspection.data.product,
+                                },
+                            },
                         ]
                         : []),
+
                     ...(inspection.data.version
                         ? [
-                            `Version: ${inspection.data.version}`,
+                            {
+                                key:
+                                    "findings.common.detectedVersion",
+                                params: {
+                                    version:
+                                        inspection.data.version,
+                                },
+                            },
                         ]
                         : []),
                 ],
 
                 port: inspection.port,
-
                 service: inspection.service,
-
                 confidence: 1,
             });
         }

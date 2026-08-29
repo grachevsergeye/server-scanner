@@ -9,6 +9,14 @@ import {
 import { useLocation } from "react-router-dom";
 
 import {
+    useRef,
+} from "react";
+
+import {
+    playScanCompleteSound,
+} from "../utils/scan-sound";
+
+import {
     createScan,
     getScan,
     type ScanJob,
@@ -31,6 +39,12 @@ export function ScanSessionProvider({
     children: ReactNode;
 }) {
     const location = useLocation();
+
+    const previousScanRef =
+    useRef<{
+        id: string;
+        status: ScanJob["status"];
+    } | null>(null);
 
     const isScannerPage =
         location.pathname === "/";
@@ -109,6 +123,43 @@ export function ScanSessionProvider({
     const clearScan = () => {
         setJob(null);
     };
+
+    useEffect(() => {
+        if (!job) {
+            previousScanRef.current =
+                null;
+
+            return;
+        }
+
+        const previous =
+            previousScanRef.current;
+
+        const wasRunning =
+            previous?.id === job.id &&
+            (
+                previous.status ===
+                    "queued" ||
+                previous.status ===
+                    "running"
+            );
+
+        const justCompleted =
+            wasRunning &&
+            job.status === "completed";
+
+        if (justCompleted) {
+            void playScanCompleteSound();
+        }
+
+        previousScanRef.current = {
+            id: job.id,
+            status: job.status,
+        };
+    }, [
+        job?.id,
+        job?.status,
+    ]);
 
     return (
         <ScanSessionContext.Provider

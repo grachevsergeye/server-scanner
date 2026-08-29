@@ -10,12 +10,16 @@ import {
     type SecurityFinding,
 } from "../api.js";
 
+import { useTranslation } from "react-i18next";
+
 import ScanHistoryDetails from "../components/ScanHistoryDetails.js";
 
 export default function ScanDetails() {
     const { id } = useParams<{
         id: string;
     }>();
+
+    const { t } = useTranslation();
 
     const [scan, setScan] =
         useState<ScanJob | null>(null);
@@ -121,12 +125,12 @@ export default function ScanDetails() {
                     to="/scans"
                     className="text-sm text-muted-foreground hover:text-foreground"
                 >
-                    ← Back to scan history
+                    {t("Backhistory")}
                 </Link>
 
                 <div className="mt-4">
                     <h1 className="text-3xl font-semibold">
-                        Scan details
+                        {t("Scandetails")}
                     </h1>
 
                     <p className="mt-1 text-sm text-muted-foreground">
@@ -135,10 +139,7 @@ export default function ScanDetails() {
                 </div>
             </div>
 
-            <ScanHistoryDetails
-                scan={scan}
-                findings={findings}
-            />
+            <ScanHistoryDetails scan={scan} />
         </main>
     );
 }

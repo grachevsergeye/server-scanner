@@ -59,7 +59,7 @@ export default function ScanSummary({
             icon: Network,
         },
         {
-            label: t("findings"),
+            label: t("findings1"),
             value: findings,
             icon: ShieldAlert,
         },

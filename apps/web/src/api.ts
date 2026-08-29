@@ -97,8 +97,13 @@ export type ScanCompletionStatus =
 export interface FindingWithScan
     extends SecurityFinding {
     scanId: string;
+    targetId: string;
     host: string;
     createdAt: string;
+
+    scanStartedAt?: string;
+    scanCompletedAt?: string;
+    scanStatus?: ScanStatus;
 }
 
 export interface ScanResult {
@@ -141,6 +146,12 @@ export interface ScanResult {
     };
 }
 
+export interface FindingEvidence {
+    key: string;
+    params?: Record<string, string | number>;
+}
+
+
 export interface SecurityFinding {
     id: string;
 
@@ -151,14 +162,12 @@ export interface SecurityFinding {
         | "high"
         | "critical";
 
-    title: string;
+    titleKey: string;
+    descriptionKey: string;
 
-    description: string;
-
-    evidence: string[];
+    evidence: FindingEvidence[];
 
     port?: number;
-
     service?: string;
 
     confidence: number;

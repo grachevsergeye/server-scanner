@@ -8,25 +8,60 @@ import {
 } from "react-i18next";
 
 import {
-    getScan,
+    ShieldAlert,
+    Server,
+    ArrowRight,
+} from "lucide-react";
+
+import {
+    Link,
+} from "react-router-dom";
+
+import {
     getScanHistory,
-    type FindingWithScan,
+    type ScanHistorySummary,
 } from "../api";
 
-import FindingCard
-    from "../components/findings/FindingCard";
+function formatDate(
+    value?: string
+) {
+    if (!value) {
+        return "—";
+    }
+
+    return new Intl.DateTimeFormat(
+        undefined,
+        {
+            dateStyle: "medium",
+            timeStyle: "short",
+        }
+    ).format(
+        new Date(value)
+    );
+}
 
 export default function Findings() {
-    const { t } = useTranslation();
+    const { t } =
+        useTranslation();
 
-    const [findings, setFindings] =
-        useState<FindingWithScan[]>([]);
+    const [
+        scans,
+        setScans,
+    ] = useState<
+        ScanHistorySummary[]
+    >([]);
 
-    const [loading, setLoading] =
-        useState(true);
+    const [
+        loading,
+        setLoading,
+    ] = useState(true);
 
-    const [error, setError] =
-        useState<string | null>(null);
+    const [
+        error,
+        setError,
+    ] = useState<
+        string | null
+    >(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -39,60 +74,46 @@ export default function Findings() {
                 const history =
                     await getScanHistory();
 
-                const fullScans =
-                    await Promise.all(
-                        history.map((scan) =>
-                            getScan(scan.id)
-                        )
-                    );
-
                 if (cancelled) {
                     return;
                 }
 
-                const allFindings:
-                    FindingWithScan[] =
-                    fullScans.flatMap(
-                        (scan) =>
-                            (
-                                scan.targets ?? []
-                            ).flatMap(
-                                (target) =>
-                                    (
-                                        target
-                                            .analysis
-                                            ?.findings ??
-                                        []
-                                    ).map(
-                                        (
-                                            finding
-                                        ) => ({
-                                            ...finding,
-                                            scanId:
-                                                scan.id,
-                                            host:
-                                                target.host,
-                                            createdAt:
-                                                scan.createdAt,
-                                        })
-                                    )
-                            )
-                    );
+                const withFindings =
+                    history
+                        .filter(
+                            (scan) =>
+                                scan.findingCount >
+                                0
+                        )
+                        .sort(
+                            (a, b) =>
+                                new Date(
+                                    b.completedAt ??
+                                        b.createdAt
+                                ).getTime() -
+                                new Date(
+                                    a.completedAt ??
+                                        a.createdAt
+                                ).getTime()
+                        );
 
-                setFindings(
-                    allFindings
+                setScans(
+                    withFindings
                 );
             } catch (error) {
                 if (!cancelled) {
                     setError(
-                        error instanceof Error
+                        error instanceof
+                        Error
                             ? error.message
                             : "Failed to load findings"
                     );
                 }
             } finally {
                 if (!cancelled) {
-                    setLoading(false);
+                    setLoading(
+                        false
+                    );
                 }
             }
         }
@@ -127,7 +148,9 @@ export default function Findings() {
                         text-[var(--accent)]
                     "
                 >
-                    {t("csrdpscanner")}
+                    {t(
+                        "csrdpscanner"
+                    )}
                 </div>
 
                 <h1
@@ -137,7 +160,7 @@ export default function Findings() {
                         tracking-tight
                     "
                 >
-                    {t("findings")}
+                    {t("findings1")}
                 </h1>
 
                 <p
@@ -147,9 +170,9 @@ export default function Findings() {
                         text-[var(--text-secondary)]
                     "
                 >
-                    Security issues discovered
-                    across your infrastructure
-                    scans.
+                    {t(
+                        "securityissues"
+                    )}
                 </p>
             </div>
 
@@ -165,7 +188,13 @@ export default function Findings() {
                         text-[var(--text-secondary)]
                     "
                 >
-                    Loading findings...
+                    {t(
+                        "loadingFindings",
+                        {
+                            defaultValue:
+                                "Loading findings...",
+                        }
+                    )}
                 </div>
             )}
 
@@ -185,95 +214,267 @@ export default function Findings() {
                 </div>
             )}
 
-            {!loading && !error && (
-                <section
-                    className="
-                        overflow-hidden
-                        rounded-xl
-                        border
-                        border-gray-700
-                        bg-white/[0.025]
-                    "
-                >
+            {!loading &&
+                !error &&
+                scans.length ===
+                    0 && (
                     <div
                         className="
-                            flex
-                            items-center
-                            justify-between
-                            border-b
+                            rounded-xl
+                            border
                             border-gray-700
-                            p-5
-                            sm:p-6
+                            bg-white/[0.025]
+                            p-10
+                            text-center
                         "
                     >
-                        <div>
-                            <h2 className="text-base font-semibold">
-                                {t(
-                                    "securityFindings"
-                                )}
-                            </h2>
-
-                            <p
-                                className="
-                                    mt-1
-                                    text-sm
-                                    text-[var(--text-secondary)]
-                                "
-                            >
-                                Security findings
-                                discovered during
-                                your scans.
-                            </p>
-                        </div>
-
-                        <span
+                        <ShieldAlert
+                            size={24}
                             className="
-                                rounded-full
-                                bg-white/5
-                                px-2.5
-                                py-1
-                                text-xs
-                                font-medium
-                                text-[var(--text-secondary)]
-                            "
-                        >
-                            {findings.length}
-                        </span>
-                    </div>
-
-                    {findings.length === 0 ? (
-                        <div
-                            className="
-                                px-5
-                                py-12
-                                text-center
-                                text-sm
+                                mx-auto
                                 text-emerald-400
-                                sm:px-6
                             "
-                        >
-                            ✓ No findings have
-                            been detected.
-                        </div>
-                    ) : (
-                        <div className="divide-y divide-white/10">
-                            {findings.map(
-                                (finding) => (
-                                    <FindingCard
-                                        key={`${finding.scanId}-${finding.id}`}
-                                        finding={
-                                            finding
-                                        }
-                                        scanId={
-                                            finding.scanId
-                                        }
-                                    />
-                                )
+                        />
+
+                        <div className="mt-3 text-sm font-medium">
+                            {t(
+                                "noFindings"
                             )}
                         </div>
-                    )}
-                </section>
-            )}
+                    </div>
+                )}
+
+            {!loading &&
+                !error &&
+                scans.length >
+                    0 && (
+                    <div className="space-y-3">
+                        {scans.map(
+                            (scan) => (
+                                <Link
+                                    key={
+                                        scan.id
+                                    }
+                                    to={`/findings/${scan.id}`}
+                                    className="
+                                        group
+                                        block
+                                        overflow-hidden
+                                        rounded-xl
+                                        border
+                                        border-gray-700
+                                        bg-white/[0.025]
+                                        transition
+                                        hover:border-blue-400/20
+                                        hover:bg-white/[0.04]
+                                    "
+                                >
+                                    <div className="p-5 sm:p-6">
+                                        <div
+                                            className="
+                                                flex
+                                                items-start
+                                                justify-between
+                                                gap-4
+                                            "
+                                        >
+                                            <div
+                                                className="
+                                                    flex
+                                                    min-w-0
+                                                    items-start
+                                                    gap-3
+                                                "
+                                            >
+                                                <div
+                                                    className="
+                                                        flex
+                                                        h-9
+                                                        w-9
+                                                        shrink-0
+                                                        items-center
+                                                        justify-center
+                                                        rounded-lg
+                                                        bg-orange-400/10
+                                                        text-orange-400
+                                                    "
+                                                >
+                                                    <ShieldAlert
+                                                        size={
+                                                            18
+                                                        }
+                                                    />
+                                                </div>
+
+                                                <div className="min-w-0">
+                                                    <div
+                                                        className="
+                                                            text-xs
+                                                            uppercase
+                                                            tracking-wide
+                                                            text-[var(--text-secondary)]
+                                                        "
+                                                    >
+                                                        {t(
+                                                            "scan"
+                                                        )}
+                                                    </div>
+
+                                                    <div
+                                                        className="
+                                                            mt-1
+                                                            truncate
+                                                            font-mono
+                                                            text-sm
+                                                            font-medium
+                                                        "
+                                                    >
+                                                        {
+                                                            scan.id
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <span
+                                                className="
+                                                    flex
+                                                    shrink-0
+                                                    items-center
+                                                    gap-1.5
+                                                    text-xs
+                                                    font-medium
+                                                    text-blue-400
+                                                "
+                                            >
+                                                {t(
+                                                    "view",
+                                                    {
+                                                        defaultValue:
+                                                            "View",
+                                                    }
+                                                )}
+
+                                                <ArrowRight
+                                                    size={
+                                                        14
+                                                    }
+                                                />
+                                            </span>
+                                        </div>
+
+                                        <div
+                                            className="
+                                                mt-5
+                                                grid
+                                                gap-3
+                                                sm:grid-cols-3
+                                            "
+                                        >
+                                            <div
+                                                className="
+                                                    rounded-lg
+                                                    border
+                                                    border-gray-700
+                                                    bg-black/10
+                                                    px-4
+                                                    py-3
+                                                "
+                                            >
+                                                <div
+                                                    className="
+                                                        flex
+                                                        items-center
+                                                        gap-2
+                                                        text-xs
+                                                        text-[var(--text-secondary)]
+                                                    "
+                                                >
+                                                    <Server
+                                                        size={
+                                                            14
+                                                        }
+                                                    />
+
+                                                    {t(
+                                                        "targets"
+                                                    )}
+                                                </div>
+
+                                                <div className="mt-1 text-sm font-semibold">
+                                                    {
+                                                        scan.totalTargets
+                                                    }
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                className="
+                                                    rounded-lg
+                                                    border
+                                                    border-gray-700
+                                                    bg-black/10
+                                                    px-4
+                                                    py-3
+                                                "
+                                            >
+                                                <div
+                                                    className="
+                                                        flex
+                                                        items-center
+                                                        gap-2
+                                                        text-xs
+                                                        text-[var(--text-secondary)]
+                                                    "
+                                                >
+                                                    <ShieldAlert
+                                                        size={
+                                                            14
+                                                        }
+                                                    />
+
+                                                    {t(
+                                                        "findings1"
+                                                    )}
+                                                </div>
+
+                                                <div className="mt-1 text-sm font-semibold">
+                                                    {
+                                                        scan.findingCount
+                                                    }
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                className="
+                                                    rounded-lg
+                                                    border
+                                                    border-gray-700
+                                                    bg-black/10
+                                                    px-4
+                                                    py-3
+                                                "
+                                            >
+                                                <div className="text-xs text-[var(--text-secondary)]">
+                                                    {t(
+                                                        "completed"
+                                                    )}
+                                                </div>
+
+                                                <div className="mt-1 text-xs font-medium">
+                                                    {formatDate(
+                                                        scan.completedAt ??
+                                                            scan.createdAt
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Link>
+                            )
+                        )}
+                    </div>
+                )}
         </main>
     );
 }

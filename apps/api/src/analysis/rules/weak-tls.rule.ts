@@ -45,14 +45,20 @@ export class WeakTlsRule
 
                     severity: "high",
 
-                    title: "Weak TLS protocol",
+                    titleKey:
+                        "findings.weakTls.title",
 
-                    description:
-                        `The service supports ${protocol}, ` +
-                        "which should no longer be used.",
+                    descriptionKey:
+                        "findings.weakTls.description",
 
                     evidence: [
-                        `Protocol: ${protocol}`,
+                        {
+                            key:
+                                "findings.weakTls.evidence.protocol",
+                            params: {
+                                protocol,
+                            },
+                        },
                     ],
 
                     port: inspection.port,

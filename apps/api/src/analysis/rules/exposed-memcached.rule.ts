@@ -40,33 +40,42 @@ export class ExposedMemcachedRule
 
             findings.push({
                 id: this.id,
-
                 severity: "critical",
 
-                title: "Memcached service exposed",
+                titleKey:
+                    "findings.exposedMemcached.title",
 
-                description:
-                    "A Memcached service is publicly accessible. " +
-                    "Memcached should generally not be directly " +
-                    "exposed to untrusted networks.",
+                descriptionKey:
+                    "findings.exposedMemcached.description",
 
                 evidence: [
-                    `Port ${port.port} is running Memcached.`,
+                    {
+                        key:
+                            "findings.exposedMemcached.evidence.portRunningService",
+                        params: {
+                            port: port.port,
+                            service: "Memcached",
+                        },
+                    },
+
                     ...(authentication
                         ? [
-                            `Authentication required: ${
-                                authentication.required
-                                    ? "yes"
-                                    : "no"
-                            }.`,
+                            {
+                                key:
+                                    "findings.exposedMemcached.evidence.authenticationRequired",
+                                params: {
+                                    required:
+                                        authentication.required
+                                            ? "yes"
+                                            : "no",
+                                },
+                            },
                         ]
                         : []),
                 ],
 
                 port: port.port,
-
                 service: "memcached",
-
                 confidence: 1,
             });
         }

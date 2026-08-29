@@ -10,6 +10,8 @@ import {
 import { Link } from "react-router-dom";
 import type { ScanHistorySummary } from "../api.js";
 
+import { useTranslation } from "react-i18next";
+
 interface Props {
     scan: ScanHistorySummary;
 }
@@ -24,7 +26,6 @@ function getStatusConfig(
     switch (status) {
         case "completed":
             return {
-                label: "Completed",
                 className:
                     "border-emerald-400/20 bg-emerald-400/10 text-emerald-400",
                 icon: CheckCircle2,
@@ -32,7 +33,6 @@ function getStatusConfig(
 
         case "failed":
             return {
-                label: "Failed",
                 className:
                     "border-red-400/20 bg-red-400/10 text-red-400",
                 icon: CircleAlert,
@@ -40,7 +40,6 @@ function getStatusConfig(
 
         case "running":
             return {
-                label: "Running",
                 className:
                     "border-blue-400/20 bg-blue-400/10 text-blue-400",
                 icon: Clock3,
@@ -48,23 +47,14 @@ function getStatusConfig(
 
         case "queued":
             return {
-                label: "Queued",
                 className:
                     "border-yellow-400/20 bg-yellow-400/10 text-yellow-400",
                 icon: Clock3,
             };
 
         case "cancelled":
-            return {
-                label: "Cancelled",
-                className:
-                    "border-gray-700 bg-white/5 text-[var(--text-secondary)]",
-                icon: CircleAlert,
-            };
-
         default:
             return {
-                label: status,
                 className:
                     "border-gray-700 bg-white/5 text-[var(--text-secondary)]",
                 icon: CircleAlert,
@@ -101,10 +91,16 @@ export default function ScanHistoryCard({
     const status = getStatusConfig(scan.status);
     const StatusIcon = status.icon;
 
+    const { t } = useTranslation();
+
     const title =
         scan.targets.length === 1
-            ? scan.targets[0]?.host ?? "Unknown target"
-            : `${scan.targets.length} targets`;
+            ? scan.targets[0]?.host ??
+            t("unknownTarget")
+            : t("targetCount", {
+                count:
+                    scan.targets.length,
+            });
 
     return (
         <Link
@@ -172,7 +168,7 @@ export default function ScanHistoryCard({
                         `}
                     >
                         <StatusIcon size={13} />
-                        {status.label}
+                        {t(`status.${scan.status}`)}
                     </span>
                 </div>
 
@@ -187,25 +183,25 @@ export default function ScanHistoryCard({
                 >
                     <Stat
                         icon={Server}
-                        label="Targets"
+                        label={t("targets")}
                         value={`${scan.completedTargets}/${scan.totalTargets}`}
                     />
 
                     <Stat
                         icon={Server}
-                        label="Ports"
+                        label={t("ports")}
                         value={scan.portCount}
                     />
 
                     <Stat
                         icon={ShieldAlert}
-                        label="Findings"
+                        label={t("findings1")}
                         value={scan.findingCount}
                     />
 
                     <Stat
                         icon={CircleAlert}
-                        label="Failed"
+                        label={t("failed")}
                         value={scan.failedTargets}
                     />
                 </div>
@@ -241,7 +237,7 @@ export default function ScanHistoryCard({
                         group-hover:gap-2
                     "
                 >
-                    View scan
+                    {t("viewScan")}
                     <ArrowRight size={14} />
                 </span>
             </div>

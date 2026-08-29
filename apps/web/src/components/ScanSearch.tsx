@@ -3,10 +3,14 @@ interface ScanSearchProps {
     onChange: (value: string) => void;
 }
 
+import { useTranslation } from "react-i18next";
+
 export default function ScanSearch({
     value,
     onChange,
 }: ScanSearchProps) {
+
+    const { t } = useTranslation();
 
     return (
         <input
@@ -14,7 +18,7 @@ export default function ScanSearch({
             onChange={event =>
                 onChange(event.target.value)
             }
-            placeholder="Search by IP or hostname..."
+            placeholder={t("Searchip")}
             className="
                 w-full
                 py-2
