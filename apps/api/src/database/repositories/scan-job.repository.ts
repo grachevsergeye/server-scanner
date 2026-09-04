@@ -30,21 +30,18 @@ export interface UpdateScanJobData {
 export interface ScanHistorySummary {
     id: string;
     status: string;
-
     totalTargets: number;
     completedTargets: number;
     failedTargets: number;
-
     createdAt: Date;
     startedAt?: Date;
     completedAt?: Date;
-
+    durationMs?: number;
     targets: {
         host: string;
         status: string;
         hostState?: string;
     }[];
-
     portCount: number;
     findingCount: number;
 }

@@ -10,6 +10,7 @@ import {
     Search,
     History,
     ShieldAlert,
+    BarChart3,
     X,
 } from "lucide-react";
 
@@ -50,6 +51,12 @@ export default function Sidebar({
             to: "/findings",
             label: t("findings1"),
             icon: ShieldAlert,
+        },
+        {
+            key: "analytics",
+            to: "/analytics",
+            label: t("analytics"),
+            icon: BarChart3,
         },
     ];
 
@@ -134,36 +141,24 @@ export default function Sidebar({
                                     item.to ===
                                     "/"
                                 }
-                                className={({
-                                    isActive,
-                                }) =>
-                                    [
-                                        "relative",
-                                        "flex",
-                                        "items-center",
-                                        "gap-3",
-                                        "rounded-lg",
-                                        "px-3",
-                                        "py-2.5",
-                                        "text-sm",
-                                        "transition",
-                                        isActive
-                                            ? [
-                                                  "bg-[var(--accent-soft)]",
-                                                  "text-[var(--accent)]",
-                                              ].join(
-                                                  " "
-                                              )
-                                            : [
-                                                  "text-[var(--text-primary)]",
-                                                  "hover:bg-[var(--hover-bg)]",
-                                              ].join(
-                                                  " "
-                                              ),
-                                    ].join(
-                                        " "
-                                    )
-                                }
+                            className={({ isActive }) =>
+                                [
+                                    "relative",
+                                    "flex",
+                                    "items-center",
+                                    "gap-3",
+                                    "rounded-lg",
+                                    "px-3",
+                                    "py-2.5",
+                                    "text-sm",
+                                    "transition-colors",
+                                    "duration-150",
+
+                                    isActive
+                                        ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+                                        : "text-[var(--text-primary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]",
+                                ].join(" ")
+                            }
                             >
                                 {({
                                     isActive,

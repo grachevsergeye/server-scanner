@@ -107,6 +107,8 @@ export interface ScanJob {
     startedAt?: Date;
     completedAt?: Date;
 
+    durationMs?: number;
+
     error?: string;
 }
 

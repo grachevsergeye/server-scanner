@@ -4,9 +4,12 @@ import {
 } from "react-router-dom";
 
 import ScannerLayout from "./layouts/ScannerLayout";
+
 import Scanner from "./routes/Scanner";
 import Scans from "./routes/Scans";
 import Findings from "./routes/Findings";
+import Analytics from "./routes/Analytics";
+
 import ScanDetails from "./routes/ScanDetails";
 import FindingDetails from "./components/findings/FindingDetails";
 import ScanFindings from "./routes/ScanFindings";
@@ -22,7 +25,9 @@ function NotFound() {
 export default function App() {
     return (
         <Routes>
+
             <Route element={<ScannerLayout />}>
+
                 <Route
                     path="/"
                     element={<Scanner />}
@@ -32,6 +37,7 @@ export default function App() {
                     path="/scans"
                     element={<Scans />}
                 />
+
                 <Route
                     path="/scans/:id"
                     element={<ScanDetails />}
@@ -53,10 +59,17 @@ export default function App() {
                 />
 
                 <Route
+                    path="/analytics"
+                    element={<Analytics />}
+                />
+
+                <Route
                     path="*"
                     element={<NotFound />}
                 />
+
             </Route>
+
         </Routes>
     );
 }

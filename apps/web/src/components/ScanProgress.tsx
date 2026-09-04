@@ -11,28 +11,35 @@ interface ScanProgressProps {
 
 const SCAN_CONCURRENCY = 4;
 
-function formatDuration(ms: number): string {
+function formatDuration(
+    ms: number,
+    t: (key: string, options?: Record<string, unknown>) => string
+): string {
     const seconds = Math.max(
         0,
         Math.ceil(ms / 1000)
     );
 
     if (seconds < 60) {
-        return `${seconds} second${
-            seconds === 1 ? "" : "s"
-        }`;
+        return t("duration.seconds", {
+            count: seconds,
+        });
     }
 
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
 
     if (remainingSeconds === 0) {
-        return `${minutes} minute${
-            minutes === 1 ? "" : "s"
-        }`;
+        return t("duration.minutes", {
+            count: minutes,
+        });
     }
 
-    return `${minutes}m ${remainingSeconds}s`;
+    return `${t("duration.minutes", {
+        count: minutes,
+    })} ${t("duration.seconds", {
+        count: remainingSeconds,
+    })}`;
 }
 
 export default function ScanProgress({
@@ -64,28 +71,16 @@ export default function ScanProgress({
         job.status === "queued" ||
         job.status === "running";
 
-    useEffect(() => {
-        if (!isActive) {
-            return;
-        }
-
-        const interval =
-            window.setInterval(() => {
-            }, 1000);
-
-        return () => {
-            window.clearInterval(interval);
-        };
-    }, [isActive]);
-
     const startedAt = job.startedAt
         ? new Date(job.startedAt).getTime()
         : null;
 
     const elapsedMs =
-        startedAt !== null
-            ? Math.max(0, now - startedAt)
-            : 0;
+        job.durationMs != null
+            ? job.durationMs
+            : startedAt !== null
+                ? Math.max(0, now - startedAt)
+                : 0;
 
     const remaining =
         Math.max(
@@ -228,7 +223,7 @@ export default function ScanProgress({
                         mt-6
                         grid
                         gap-3
-                        sm:grid-cols-2
+                        sm:grid-cols-3
                     "
                 >
                     <div
@@ -249,7 +244,7 @@ export default function ScanProgress({
                                 text-[var(--text-secondary)]
                             "
                         >
-                            Current target
+                            {t("currenttarget")}
                         </div>
 
                         <div
@@ -283,7 +278,7 @@ export default function ScanProgress({
                                 text-[var(--text-secondary)]
                             "
                         >
-                            Estimated time remaining
+                            {t("etimatedtime")}
                         </div>
 
                         <div
@@ -296,9 +291,43 @@ export default function ScanProgress({
                         >
                             {showEta
                                 ? `~${formatDuration(
-                                      estimatedRemainingMs
+                                      estimatedRemainingMs,
+                                      t
                                   )}`
                                 : "Calculating..."}
+                        </div>
+                    </div>
+
+                    <div
+                        className="
+                            rounded-lg
+                            border
+                            border-gray-700
+                            bg-black/10
+                            p-4
+                        "
+                    >
+                        <div
+                            className="
+                                text-xs
+                                font-medium
+                                uppercase
+                                tracking-wide
+                                text-[var(--text-secondary)]
+                            "
+                        >
+                            {t("scantime")}
+                        </div>
+
+                        <div
+                            className="
+                                mt-2
+                                text-sm
+                                font-medium
+                                text-blue-400
+                            "
+                        >
+                            {formatDuration(elapsedMs, t)}
                         </div>
                     </div>
                 </div>

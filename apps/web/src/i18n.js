@@ -17,8 +17,10 @@ const resources = {
         translation: {
             scanner: "Scanner",
             csrdpscanner: "CSRDP / SCANNER",
+            csrdpanalysis: "CSRDP / ANALYSIS",
             workspace: "Workspace",
             system: "System",
+            analytics: "Analytics",
 
             scanHistory: "Scan History",
             findings1: "Findings",
@@ -47,6 +49,10 @@ const resources = {
             scanProgress: "Scan Progress",
 
             targets: "targets",
+            duration1: "Duration",
+            currenttarget: "Current target:",
+            etimatedtime: "Estimated time remaining:",
+            scantime: "Scan time:",
 
             hosts: "Hosts",
             host: "Host",
@@ -130,6 +136,13 @@ const resources = {
                 failed: "Failed"
             },
 
+            duration: {
+                seconds: "{{count}} second",
+                seconds_other: "{{count}} seconds",
+                minutes: "{{count}} minute",
+                minutes_other: "{{count}} minutes"
+            },
+
             findings: {
                 exposedTelnet: {
                     title: "Telnet service exposed",
@@ -207,6 +220,38 @@ const resources = {
                 }
             },
 
+            dateTime: {
+                selectDateTime: "Select date and time",
+                year: "Year",
+                time: "Time",
+                clear: "Clear",
+
+                months: {
+                    january: "January",
+                    february: "February",
+                    march: "March",
+                    april: "April",
+                    may: "May",
+                    june: "June",
+                    july: "July",
+                    august: "August",
+                    september: "September",
+                    october: "October",
+                    november: "November",
+                    december: "December",
+                },
+
+                weekdays: {
+                    sun: "Sun",
+                    mon: "Mon",
+                    tue: "Tue",
+                    wed: "Wed",
+                    thu: "Thu",
+                    fri: "Fri",
+                    sat: "Sat",
+                },
+            },
+
             Searchip: "Search by IP or hostname...",
             statusLabel: "Status",
             created: "Created",
@@ -231,6 +276,58 @@ const resources = {
             findingdetails: "Finding details",
             Scandetails: "Scan details",
             securityissues: "Security issues discovered across your infrastructure scans.",
+
+            analytics: "Analytics",
+            analyticsDescription: "Website traffic and registration analytics",
+
+            viewer: "Viewer",
+            admin: "Admin",
+
+            filters: "Filters",
+            analyticsFiltersDescription: "Filter analytics records by dataset, source, traffic source, IP address, URL, or date range.",
+
+            clickevents: "Click Events",
+            linkclicks: "Link Clicks",
+
+            event: "Event",
+            source: "Source",
+            trafficsource: "Traffic source",
+            ipaddress: "IP address",
+            targeturl: "Target URL",
+            date: "Date",
+
+            applyFilters: "Apply filters",
+            reset: "Reset",
+            exportCsv: "Export CSV",
+
+            registrations: "Registrations",
+            filteredResults: "Filtered Results",
+
+            dataManagement: "Data Management",
+            analyticsDeleteDescription: "Delete analytics records using filters, the latest records, or a date range.",
+
+            delete: "Delete",
+            deleteFiltered: "Delete filtered records",
+            deleteLast: "Delete latest records",
+            deleteDateRange: "Delete by date range",
+
+            processing: "Processing...",
+            deleting: "Deleting...",
+            confirmDeletion: "Confirm deletion",
+            confirmDeletionDescription: "This action will permanently delete {{count}} record(s). Are you sure you want to continue?",
+            cancel: "Cancel",
+            confirmDelete: "Confirm delete",
+
+            results: "Results",
+            noResults: "No results found.",
+
+            eventTariffVps1m: "VPS tariff — 1 month",
+            eventTariffVds1mFin: "VDS tariff — 1 month",
+            eventLoginClick: "Login button click",
+            eventRegisterClick: "Register button click",
+            fromDate: "From date",
+            toDate: "To date",
+
         },
     },
 
@@ -238,8 +335,10 @@ const resources = {
         translation: {
             scanner: "Сканер",
             csrdpscanner: "CSRDP / Сканер",
+            csrdpanalysis: "CSRDP / Анализ",
             workspace: "Рабочая область",
             system: "Система",
+            analytics: "Аналитика",
 
             scanHistory: "История сканирования",
             findings1: "Результаты/Уязвимости",
@@ -268,7 +367,11 @@ const resources = {
             scanProgress:
                 "Прогресс сканирования",
 
-            targets: "целей",
+            targets: "Целей",
+            duration1: "Продолжительность",
+            currenttarget: "Текущая цель:",
+            etimatedtime: "Примерно осталось:",
+            scantime: "Время сканирования:",
 
             hosts: "Хосты",
             host: "Хост",
@@ -353,6 +456,18 @@ const resources = {
                 failed: "Ошибка"
             },
 
+            duration: {
+                seconds_one: "{{count}} секунда",
+                seconds_few: "{{count}} секунды",
+                seconds_many: "{{count}} секунд",
+                seconds_other: "{{count}} секунды",
+
+                minutes_one: "{{count}} минута",
+                minutes_few: "{{count}} минуты",
+                minutes_many: "{{count}} минут",
+                minutes_other: "{{count}} минуты",
+            },
+
             findings: {
                 exposedTelnet: {
                     title: "Обнаружен открытый Telnet",
@@ -430,6 +545,38 @@ const resources = {
                 }
             },
 
+            dateTime: {
+                selectDateTime: "Выбери дату и время",
+                year: "Год",
+                time: "Время",
+                clear: "Очистить",
+
+                months: {
+                    january: "Январь",
+                    february: "Февраль",
+                    march: "Март",
+                    april: "Апрель",
+                    may: "Май",
+                    june: "Июнь",
+                    july: "Июль",
+                    august: "Август",
+                    september: "Сентябрь",
+                    october: "Октябрь",
+                    november: "Ноябрь",
+                    december: "Декабрь",
+                },
+
+                weekdays: {
+                    sun: "Вс",
+                    mon: "Пн",
+                    tue: "Вт",
+                    wed: "Ср",
+                    thu: "Чт",
+                    fri: "Пт",
+                    sat: "Сб",
+                },
+            },
+
             Searchip: "Поиск по IP-адресу или имени хоста...",
             statusLabel: "Статус",
             created: "Создано",
@@ -456,6 +603,57 @@ const resources = {
             findingdetails: "Детали уязвимости",
             Scandetails: "Детали сканирования",
             securityissues: "Проблемы безопасности, выявленные в ходе сканирования вашей инфраструктуры.",
+
+            analytics: "Аналитика",
+            analyticsDescription: "Website трафик и регистрационная аналитика",
+
+            viewer: "Viewer",
+            admin: "Админ",
+
+            filters: "Фильтры",
+            analyticsFiltersDescription: "Фильтрация записей аналитики по набору данных, источнику, источнику трафика, IP-адресу, URL или диапазону дат.",
+
+            clickevents: "События кликов",
+            linkclicks: "Клики по ссылкам",
+
+            event: "Событие",
+            source: "Источник",
+            trafficsource: "Источник трафика",
+            ipaddress: "IP-адрес",
+            targeturl: "Целевой URL",
+            date: "Дата",
+
+            applyFilters: "Применить фильтры",
+            reset: "Сбросить",
+            exportCsv: "Экспорт в CSV",
+
+            registrations: "Регистрации",
+            filteredResults: "Отфильтрованные результаты",
+
+            dataManagement: "Управление данными",
+            analyticsDeleteDescription: "Удаление записей аналитики с использованием фильтров, последних записей или диапазона дат.",
+
+            delete: "Удалить",
+            deleteFiltered: "Удалить отфильтрованные записи",
+            deleteLast: "Удалить последние записи",
+            deleteDateRange: "Удалить по диапазону дат",
+
+            processing: "Обработка...",
+            deleting: "Удаление...",
+            confirmDeletion: "Подтвердить удаление",
+            confirmDeletionDescription: "Это действие навсегда удалит {{count}} запись(и). Вы уверены, что хотите продолжить?",
+            cancel: "Отмена",
+            confirmDelete: "Подтвердить удаление",
+
+            results: "Результаты",
+            noResults: "Результаты не найдены.",
+
+            eventTariffVps1m: "VPS тариф — 1 месяц",
+            eventTariffVds1mFin: "VDS тариф — 1 месяц",
+            eventLoginClick: "Нажатие на кнопку входа",
+            eventRegisterClick: "Нажатие на кнопку регистрации",
+            fromDate: "С даты",
+            toDate: "По дату",
         },
     },
 };

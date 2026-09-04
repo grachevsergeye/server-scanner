@@ -20,6 +20,37 @@ function formatDate(value: string) {
     return new Date(value).toLocaleString();
 }
 
+function formatDuration(
+    ms: number,
+    t: (key: string, options?: Record<string, unknown>) => string
+): string {
+    const seconds = Math.max(
+        0,
+        Math.round(ms / 1000)
+    );
+
+    if (seconds < 60) {
+        return t("duration.seconds", {
+            count: seconds,
+        });
+    }
+
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+
+    if (remainingSeconds === 0) {
+        return t("duration.minutes", {
+            count: minutes,
+        });
+    }
+
+    return `${t("duration.minutes", {
+        count: minutes,
+    })} ${t("duration.seconds", {
+        count: remainingSeconds,
+    })}`;
+}
+
 function getStatusConfig(
     status: ScanHistorySummary["status"]
 ) {
@@ -178,7 +209,7 @@ export default function ScanHistoryCard({
                         grid
                         grid-cols-2
                         gap-3
-                        sm:grid-cols-4
+                        sm:grid-cols-5
                     "
                 >
                     <Stat
@@ -203,6 +234,16 @@ export default function ScanHistoryCard({
                         icon={CircleAlert}
                         label={t("failed")}
                         value={scan.failedTargets}
+                    />
+
+                    <Stat
+                        icon={Clock3}
+                        label={t("duration1")}
+                        value={
+                            scan.durationMs != null
+                                ? formatDuration(scan.durationMs, t)
+                                : "—"
+                        }
                     />
                 </div>
             </div>

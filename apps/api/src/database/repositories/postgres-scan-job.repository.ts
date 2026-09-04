@@ -96,6 +96,7 @@ export class PostgresScanJobRepository
                     sj.created_at,
                     sj.started_at,
                     sj.completed_at,
+                    sj.duration_ms,
 
                     COALESCE(
                         (
@@ -160,53 +161,40 @@ export class PostgresScanJobRepository
                 [limit]
             );
 
-        return result.rows.map(
-            (row) => ({
-                id: row.id,
-                status: row.status,
+        return result.rows.map((row) => ({
+            id: row.id,
+            status: row.status,
 
-                totalTargets:
-                    row.total_targets,
+            totalTargets: row.total_targets,
+            completedTargets: row.completed_targets,
+            failedTargets: row.failed_targets,
 
-                completedTargets:
-                    row.completed_targets,
+            createdAt: new Date(row.created_at),
 
-                failedTargets:
-                    row.failed_targets,
+            ...(row.duration_ms != null
+                ? {
+                    durationMs: Number(row.duration_ms),
+                }
+                : {}),
 
-                createdAt:
-                    new Date(
-                        row.created_at
-                    ),
+            ...(row.started_at
+                ? {
+                    startedAt: new Date(row.started_at),
+                }
+                : {}),
 
-                ...(row.started_at
-                    ? {
-                        startedAt:
-                            new Date(
-                                row.started_at
-                            ),
-                    }
-                    : {}),
+            ...(row.completed_at
+                ? {
+                    completedAt: new Date(row.completed_at),
+                }
+                : {}),
 
-                ...(row.completed_at
-                    ? {
-                        completedAt:
-                            new Date(
-                                row.completed_at
-                            ),
-                    }
-                    : {}),
+            targets: row.targets ?? [],
 
-                targets:
-                    row.targets ?? [],
+            portCount: row.port_count ?? 0,
 
-                portCount:
-                    row.port_count ?? 0,
-
-                findingCount:
-                    row.finding_count ?? 0,
-            })
-        );
+            findingCount: row.finding_count ?? 0,
+        }));
     }
 
     async update(
@@ -335,7 +323,20 @@ export class PostgresScanJobRepository
                             1 >= total_targets
                         THEN NOW()
                         ELSE completed_at
-                    END
+                    END,
+
+                    duration_ms =
+                        CASE
+                            WHEN completed_targets +
+                                failed_targets +
+                                1 >= total_targets
+                            THEN EXTRACT(
+                                EPOCH FROM (
+                                    NOW() - COALESCE(started_at, created_at)
+                                )
+                            ) * 1000
+                            ELSE duration_ms
+                        END
 
             WHERE id = $1
 
@@ -381,6 +382,11 @@ export class PostgresScanJobRepository
         if (row.completed_at !== null) {
             job.completedAt =
                 new Date(row.completed_at);
+        }
+
+        if (row.duration_ms !== null) {
+            job.durationMs =
+                Number(row.duration_ms);
         }
 
         if (row.error !== null) {
